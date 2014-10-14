@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{#
+	sidebar menu
+#}
+	<nav class="menu center">
+	    <ul>
+			  <li class="current">Menu</li>
+	      <li><a href="/newsite/">New Site</a></li>
+	      <li><a href="/displayFilesForm/">Bulk Upload Posts</a></li>
+	      <li><a href="/insertFromFiles/">Insert From Files</a></li>
+	      <li><a href="/mysites/">My Sites</a></li>
+	      <li><a href="/signout/">Signout</a></li>
+	    </ul>
+	</nav>
+		<div class="content">
+		        <h2>My Sites</h2>
+
+		        <table class="table-stripes">
+		          <thead>
+		            <tr>
+		              <td>Site Name</td>
+		              <td>Site URL</td>
+		              <td>Nick Name</td>
+		            </tr>
+		          </thead>
+							<tbody>
+								{% for site in mySites %}
+									<tr>
+											<td>
+												<a href="/displaySite/{{site.id}}/">{{site.name}}</a>
+											</td>
+											<td>
+												{{site.url}}
+											</td>
+											<td>
+												{{site.nickname}}
+											</td>
+											<td>
+												<a href="/editSite/{{site.id}}/">Edit</a>
+											</td>
+											<td>
+												<a href="/deleteSite/{{site.id}}/">Delete</a>
+											</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+		</div>
+		
+	</div>
+{% endblock %}
+
+{#
+	TODO: _csrf
+	TODO: find out how to add class/id for mixins
+#}

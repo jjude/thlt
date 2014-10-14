@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+	<form action="" class="siteform" method="post" name="createentry">
+	    <h2>New Entry For {{siteNickName}}</h2>
+
+	      <label class="control-label" for="title">Title:</label>
+        <input autofocus="autofocus" class="form-control" name="title" placeholder="Title" type="text">
+
+	      <label class="control-label" for="subTitle">Subtitle:</label>
+        <input class="form-control" name="subTitle" placeholder="Subtitle" type="text">
+
+	      <label class="control-label" for="slug">Slug:</label>
+        <input class="form-control" name="slug" placeholder="Slug, if you want to override" type="text">
+
+	      <label class="control-label" for="type">Type:</label>
+        <select class="form-control" name="type">
+          <option value="0">post</option>
+          <option value="1">page</option>
+        </select>
+{# this needs to be a calendar control #}
+	      <label class="control-label" for="ptime">Publish At:</label>
+        <input class="form-control" name="ptime" placeholder="Date &amp; Time (yyyy-mm-dd hh:mm)" type="text">
+
+	      <label class="control-label" for="tweetId">Tweet Id:</label>
+        <input class="form-control" name="tweetId" placeholder="Tweet Id" type="text">
+
+	      <label class="control-label" for="tags">Tags:</label>
+	        <input class="form-control" name="tags" placeholder="Tags" type="text">
+
+	      <label class="control-label" for="excerpt">Excerpt:</label>
+        <textarea class="form-control" name="excerpt" placeholder="Excerpt" rows="3"></textarea>
+
+	      <label class="control-label" for="content">Content:</label>
+        <textarea class="form-control" name="content" placeholder="Post Content" rows="20"></textarea>
+
+        <button class="button button-primary button-large" type="submit">Create</button>
+	</form>
+{% endblock %}

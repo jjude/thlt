@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+  <channel>
+  <title>site.title</title>
+  <description>site.description</description>
+  <link>site.url</link>
+	<generator>https://bitbucket.org/jjude/thlt</generator>
+	<lastBuildDate>envDetails.gTime</lastBuildDate>
+	<atom:link href="{{ site.url }}/feed.xml" rel="self" type="application/rss+xml"/>
+
+	{% for entry in entries %}
+		<item>
+			<title>{{entry.title}}</title>
+			<link>{{entry.slug}}</link>
+			<guid>{{entry.slug}}</guid>
+			<pubdate>{{entry.ptime.strftime('%d-%b-%y')}}</pubdate>
+			<description>{{entry.content}}</description>
+			<author>
+				<name>{{ user.name }}</name>
+			</author>
+		</item>
+	{% endfor %}
+</channel>
+</rss>

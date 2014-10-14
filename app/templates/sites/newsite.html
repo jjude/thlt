@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+	<form action="" class="siteform" method="post" name= "createsite">
+	        <h2>Create A New Site</h2>
+
+	          <label class="control-label" for="sitename">Site Name:</label>
+            <input autofocus="autofocus" class="form-control" name="sitename" placeholder="Name to be used for title" type="text">
+
+	          <label class="control-label" for="nickname">Nickname:</label>
+            <input class="form-control" name="nickname" placeholder="Name used in thlt for reference" type="text">
+
+	          <label class="control-label" for="tagline">Tagline:</label>
+            <input class="form-control" name="tagline" placeholder="Tagline" type="text">
+
+	          <label class="control-label" for="description">Description:</label>
+            <input class="form-control" name="description" placeholder="Description" type="text">
+
+	          <label class="control-label" for="url">URL:</label>
+            <input class="form-control" name="url" placeholder="URL" type="text">
+
+	          <label class="control-label" for="statcounterId">Statcounter Project Id:</label>
+            <input class="form-control" name="statcounterId" placeholder="ProjectId;SecurityId" type="text">
+
+	          <label class="control-label" for="gAnalytics">Google Analytics Id:</label>
+            <input class="form-control" name="gAnalytics" placeholder="Google Analytics Id" type="text">
+
+	          <label class="control-label" for="disqusName">Disqus Shortname:</label>
+            <input class="form-control" name="disqusName" placeholder="Disqus Shortname" type="text">
+
+	          <label class="col-sm-2 control-label" for="destDir">Destination Directory:</label>
+            <input class="form-control" name="destDir" placeholder="Destination Directory" type="text">
+
+            <button class="button button-primary" type="submit">Create Site</button>
+	    </form>
+{% endblock %}
+
+{#
+	TODO: _csrf
+	TODO: find out how to add class/id for mixins
+#}

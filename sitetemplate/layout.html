@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>{{site.name}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="author" content="{{site.name}}">
+		{% if entry %}
+			{% if entry.excerpt %}
+				<meta name="description" content="{{entry.excerpt}}">
+			{% endif %}
+		{% elif site.description %}
+			<meta name="description" content="{{site.description}}">
+		{% elif site.tagline %}
+			<meta name="description" content="{{site.tagline}}">
+		{% endif %}
+
+
+		{# twitter cards #}
+		<meta name="twitter:card" content="summary">
+		<meta name="twitter:creator" content="jjude">
+		{% if entry %}
+			<meta name="twitter:title" content="{{entry.title}}">
+		{% else %}
+			<meta name="twitter:title" content="{{site.name}}">
+		{% endif %}
+		{% if entry and entry.excerpt %}
+			<meta name="twitter:description" content="{{entry.excerpt}}">
+		{% elif site.description %}
+			<meta name="twitter:description" content="{{site.description}}">
+		{% elif site.tagline %}
+			<meta name="twitter:description" content="{{site.tagline}}">
+		{% endif %}
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+		<link type="text/plain" rel="author" href="/humans.txt">
+		<link rel="publisher" href="https://plus.google.com/105440944797450602039/">
+		<link rel="icon" href="/favicon.ico" type="image/x-icon">
+		<link rel="alternate" href="/feed.xml" title="{{site.name}}" type="application/atom+xml">
+		{% if envDetails.env != 'dev' %}
+			<link href="http://cdn.jjude.com/finally/blog.css?v1" rel="stylesheet">
+			<link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+		{% else %}
+			<link rel="stylesheet" href="/css/blog.css">
+			<link rel="stylesheet" href="/css/font-awesome.min.css">
+		{% endif %}
+
+		{% if envDetails.env != 'dev' and site.gAnalytics %}
+			{% include "includes/ganalytics.html" %}
+		{% endif %}
+  </head>
+
+  <body class="wrapper">
+      {% block content %}{% endblock %}
+
+			{% if envDetails.env != 'dev' and site.statcounterId %}
+				{% include "includes/statcounter.html" %}
+			{% endif %}
+  </body>
+</html>

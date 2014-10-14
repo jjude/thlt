@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<div class="sign">
+	  <form name="input" action="" method="post">
+			<h2>Please sign in...</h2>
+			<input name="email" type="email" placeholder="Email Address" autofocus="autofocus" class="form-control">
+			<input name="password" type="password" placeholder="Password" class="form-control">
+			<button type="submit" class="button button-primary">Sign In</button>			
+		</form>
+		New User? <a href="/signup/" title="Signup">Sign Up</a>
+	</div>
+{% endblock %}
+
+{#
+	TODO: _csrf
+	TODO: find out how to add class/id for mixins
+#}

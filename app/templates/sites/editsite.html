@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+	<form action="/editSite/{{site.id}}/" class="siteform" method="post" name="updatesite">
+	    <h2>Edit Site: {{site.nickname}}</h2>
+
+	      <label class="control-label">URL:</label>
+        <p class="form-control">{{site.url}}</p>
+
+	      <label class="control-label" for="sitename">Site Name:</label>
+        <input autofocus="autofocus" class="form-control" name="sitename" placeholder="Site Name" type="text" value="{{site.nickname}}">
+
+	      <label class="control-label" for="tagline">Tagline:</label>
+        <input class="form-control" name="tagline" placeholder="Tagline" type="text" value="{{site.tagline}}">
+
+	      <label class="control-label" for="description">Description:</label>
+        <input class="form-control" name="description" placeholder="Description" type="text" value="{{site.description}}">
+
+	      <label class="control-label" for="statcounterId">Statcounter Id:</label>
+        <input class="form-control" name="statcounterId" placeholder="Statcounter Id" type="text" value="{{site.statcounterId}}">
+
+	      <label class="control-label" for="gAnalytics">Google Analytics Id:</label>
+        <input class="form-control" name="gAnalytics" placeholder="Google Analytics Id" type="text" value="{{site.gAnalytics}}">
+
+	      <label class="control-label" for="disqusName">Disqus Shortname:</label>
+        <input class="form-control" name="disqusName" placeholder="Disqus Shortname" type="text" value="{{site.disqusName}}">
+
+	      <label class="control-label" for="destdir">Destination Directory:</label>
+        <input class="form-control" name="destDir" placeholder="Destination Directory" type="text" value="{{site.destDir}}">
+
+	        <button class="button button-primary" type="submit">Update Site</button>
+	</form>
+{% endblock %}
+
+{#
+	TODO: _csrf
+	TODO: find out how to add class/id for mixins
+#}
