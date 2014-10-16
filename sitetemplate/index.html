@@ -19,7 +19,7 @@
 		{% for entry in entries[0:5] %}
 			<article class="entry">
 				<span class="entrymeta">
-					<time pubdate="pubdate">{{entry.ptime.strftime('%d-%b-%y')}}</time>
+					<time pubdate="pubdate">{{entry.publishAt.strftime('%d-%b-%y')}}</time>
 					{% if entry.tagsHTML %}
 						on: {{entry.tagsHTML}}
 					{% endif %}
