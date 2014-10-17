@@ -1,5 +1,4 @@
-{% extends "layout.html" %}
-
+{% extends "base.html" %}
 {% block content %}
 <div class="page">
 	<article>
@@ -11,7 +10,7 @@
 
 			{% if entry.type == 'post' %}
 				<span class="entrymeta">
-					<a href="/">Joseph Jude </a>on <time pubdate="pubdate">{{entry.ptime.strftime('%d-%b-%y')}}</time>
+					<a href="/">Joseph Jude </a>on <time pubdate="pubdate">{{entry.publishAt.strftime('%d-%b-%y')}}</time>
 				</span>
 			{% endif %}
 		</header>

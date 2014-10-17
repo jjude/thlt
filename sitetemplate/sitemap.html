@@ -3,7 +3,7 @@
 	{% for entry in entries %}
   <url>
     <loc>{{entry.url}}</loc>
-    <lastmod>{{entry.ptime.strftime('%d-%b-%y %H:%M') }}</lastmod>
+    <lastmod>{{entry.publishAt.strftime('%d-%b-%y %H:%M') }}</lastmod>
   </url>
 	{% endfor %}
 	{% for tag in tags %}

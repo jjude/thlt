@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <div class="page">
@@ -25,8 +25,8 @@
 					{% endif %}
 				</span>
 				<h3><a href="/{{entry.slug}}/">{{entry.title}}</a></h3>
-				{% if entry.subTitle %}
-					<p class="listentrysubtitle">{{entry.subTitle}}</p>
+				{% if entry.subtitle %}
+					<p class="listentrysubtitle">{{entry.subtitle}}</p>
 				{% endif %}
 			</article>
 		{% endfor %}

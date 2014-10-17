@@ -20,9 +20,12 @@ class Configuration(object):
 		ENVIRONMENT = 'dev'
 	else:
 		try:
-			import prod_settings.py
-			SQLALCHEMY_DATABASE_URI = AZUREDB_URI
+			from prod_settings import PRODDB_URI
+			# currently only the below line
+			# AZUREDB_URI = "mysql://...."
+			SQLALCHEMY_DATABASE_URI = PRODDB_URI
 			DEBUG = False
 			ENVIRONMENT = 'prod'
 		except ImportError as e:
-			pass
+			# TODO: this should log to loggly
+			print "Error while connecting to production env: %s" % e
