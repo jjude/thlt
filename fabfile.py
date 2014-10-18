@@ -57,6 +57,7 @@ RSYNC_EXCLUDE = (
     '*.pyc',
     '*.db',
     '.git',
+    '*.log',
     '.gitignore',
     'local_settings.py',
     'fabfile.py',

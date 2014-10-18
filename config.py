@@ -13,7 +13,11 @@ import socket
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Configuration(object):
-	SECRET_KEY = str(uuid.uuid4())
+	# secret key has to be a static value; dont generate it dynamically
+	# like os.urandom or uuid.uuid4()
+	# if you set so, sessions will not be persisted
+	# ref: http://stackoverflow.com/a/18709356/770719
+	SECRET_KEY = '7ac8eb31-e96e-43d8-b587-5c7461e185c2'
 	if '.local' in socket.gethostname():
 		SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'thlt.db')
 		DEBUG = True

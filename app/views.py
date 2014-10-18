@@ -31,6 +31,8 @@ from slugify import slugify
 # decorators
 from decorators import login_required, async
 
+baseDir = os.path.abspath(os.path.dirname(__file__))
+
 ################################################################
 # utility functions
 ################################################################
@@ -102,10 +104,17 @@ def signup():
 				db.session.add(newUser)
 				db.session.commit()
 				auth_user(newUser) #sets user as authenticated in session
+				# create a directory for user files
+				# this will be used for having entry files
+				# insertFromFiles will load files from this directory
+				dirToCreate = os.path.join(baseDir,'..','userFiles', str(newUser.id))
+				if not os.path.exists(dirToCreate):
+					os.makedirs(dirToCreate)
+
 				return redirect('/mysites/')
 			except IntegrityError as error:
 				flash("Did you signup already? Try signin")
-				print error
+				app.logger.error('Error while signing up: %s' % error)
 
 	return render_template('users/signup.html')
 
@@ -123,7 +132,7 @@ def signin():
 				return redirect('/mysites/')
 			else:
 				flash("User Id or Password is Incorrect")
-				print 'user id %s is wrong' % email
+				app.logger.error('user id %s is wrong' % email)
 	return render_template('/users/signin.html')
 
 @app.route('/signout/')
@@ -160,7 +169,7 @@ def newsite():
 		db.session.commit()
 
 		siteFilesDir = 'siteFiles/' + str(newSite.id) + '/template'
-		copytree ('siteTemplate', siteFilesDir)
+		copytree(os.path.join(baseDir,'..','siteTemplate'), os.path.join(baseDir,siteFilesDir))
 		return redirect('/mysites/')
 	return render_template('/sites/newsite.html')
 
@@ -183,7 +192,7 @@ def deleteSite(siteId):
 			rmtree(siteFilesDir)
 	except Exception as e:
 		# TODO: logging
-		print e.message
+		app.logger.error('Error while deleting site:%s is:%s' % (str(siteToDelete.id), e.message))
 
 	return redirect('/mysites/')
 
@@ -207,7 +216,7 @@ def editSite(siteId):
 			flash("Your changes are saved")
 		except Exception as e:
 		# TODO: logging
-			print e.message
+			app.logger.error('Error while editing site:%s is:%s' % (str(site.id),e.message))
 		else:
 			return redirect('/mysites/')
 
@@ -264,10 +273,9 @@ def generateSite(siteId):
 	assetsDir       = os.path.join(templateBaseDir, 'assets')
 
 	if os.path.exists(outDir):
-		print "%s path exists" % outDir
 		rmtree(outDir, ignore_errors=True)
 	else:
-		print "%s path doesnt exists" % outDir
+		app.logger.error("%s path doesnt exists" % outDir)
 
 	#os.makedirs(outDir)
 	# copy assets dir
@@ -421,12 +429,9 @@ def generateSite(siteId):
 	remoteFolder = destDir + '/'
 	rsyncArguments.append(localFolder)
 	rsyncArguments.append(destDir)
-	print rsyncArguments
 	returncode = subprocess.call(["rsync"] + rsyncArguments)
-	if returncode == 0:
-		print "sync successfull"
-	else:
-		print "sync failed with %s " % str(returncode)
+	if returncode != 0:
+		app.logger.error('sync failed with %s' % str(returncode))
 
 	return redirect('/mysites/')
 
@@ -461,7 +466,6 @@ def insertFromFiles():
 	dirToRead = 'userFiles/%s' % session['userId']
 	for fileName in os.listdir(dirToRead):
 		fileName = os.path.join(dirToRead, fileName)
-		print "dealing with %s" % fileName
 		if fileName.endswith('.md'):
 			with open(fileName, 'r') as entry:
 				fileContent = unicode(entry.read(),'utf8')
@@ -485,8 +489,6 @@ def insertFromFiles():
 				EntryValues['content']	= postContent.strip()
 				EntryValues['isPost']	 = 1 if postMeta['type'] == 'post' else 0
 
-				print postMeta['type'], EntryValues['isPost']
-
 				site = Site.query.filter_by(nickname=blogName).first()
 				if site:
 					entry = Entry.query.filter_by(slug=EntryValues['slug']).first()
@@ -499,7 +501,6 @@ def insertFromFiles():
 						createEntry(site.id, EntryValues)
 						sitesUpdated.append(site.id)
 					os.remove(fileName)
-	print "sites inserted: %s" % sitesUpdated
 	return redirect('/mysites/')
 
 @app.route('/exportSite/<int:siteId>/')
@@ -511,7 +512,6 @@ def exportSite(siteId):
 
 	outDir = os.path.join('output', str(siteId), 'export')
 	if os.path.exists(outDir):
-		print "%s exists, going to delete it" % outDir
 		rmtree(outDir)
 
 	os.makedirs(outDir)
