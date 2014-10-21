@@ -6,5 +6,5 @@ Location: Delhi, India
 
 /* SITE */
 Doctype: HTML5
-Generator: thlt (https://bitbucket.org/jjude/thlt)
+Generator: thlt (http://www.thlt.in)
 

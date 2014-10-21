@@ -1,0 +1,8 @@
+prod_settings.py
+siteFiles
+*.db
+output
+synclogs
+userFiles
+sync
+fabfile.py

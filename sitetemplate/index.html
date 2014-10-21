@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <div class="page">
@@ -19,14 +19,14 @@
 		{% for entry in entries[0:5] %}
 			<article class="entry">
 				<span class="entrymeta">
-					<time pubdate="pubdate">{{entry.ptime.strftime('%d-%b-%y')}}</time>
+					<time pubdate="pubdate">{{entry.publishAt.strftime('%d-%b-%y')}}</time>
 					{% if entry.tagsHTML %}
 						on: {{entry.tagsHTML}}
 					{% endif %}
 				</span>
 				<h3><a href="/{{entry.slug}}/">{{entry.title}}</a></h3>
-				{% if entry.subTitle %}
-					<p class="listentrysubtitle">{{entry.subTitle}}</p>
+				{% if entry.subtitle %}
+					<p class="listentrysubtitle">{{entry.subtitle}}</p>
 				{% endif %}
 			</article>
 		{% endfor %}
@@ -37,8 +37,8 @@
 	<h2 class="worktype">Products Developed</h2>
 	<section class="listentries">
 		<article class="entry">
-			<h3><a href="https://bitbucket.org/jjude/thlt">thlt</a></h3>
-			<p class="entrysummary">A static blog engine for the non-geeks. Host, post and publish. Open source software developed in <a href="http://sailsjs.org/">sailsjs </a>framework.</p>
+			<h3><a href="http://www.thlt.in">thlt</a></h3>
+			<p class="entrysummary">A static blog engine for the non-geeks. Host, post and publish. Open source software developed in <a href="http://flask.pocoo.org">Flask</a> framework.</p>
 		</article>
 		<article class="entry">
 			<h3><a href="https://code.google.com/p/s-o-l/">S-O-L</a></h3>

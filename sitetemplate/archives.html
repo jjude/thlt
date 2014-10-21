@@ -1,5 +1,4 @@
-{% extends "layout.html" %}
-
+{% extends "base.html" %}
 {% block content %}
 <div class="page">
 	<header class="pageheader">
@@ -11,7 +10,7 @@
 		{% for entry in entries %}
 				<article class="entry">
 					<span class="entrymeta">
-						<time pubdate="pubdate">{{entry.ptime.strftime('%d-%b-%y')}}</time>
+						<time pubdate="pubdate">{{entry.publishAt.strftime('%d-%b-%y')}}</time>
 						{% if entry.tagsHTML %}
 							on: {{entry.tagsHTML}}
 						{% endif %}

@@ -22,6 +22,7 @@
           <td>ID</td>
           <td>Title</td>
           <td>Publish Date</td>
+          <td>Type</td>
         </tr>
       </thead>
 
@@ -30,7 +31,13 @@
           <tr>
             <td>{{entry.id}}</td>
             <td><a href="/editEntry/{{entry.id}}/">{{entry.title}}</a></td>
-            <td>{{entry.ptime.strftime('%d-%b-%y %H:%M')}}</td>
+            {# <td>{{entry.publishAt.strftime('%d-%b-%y %H:%M')}}</td> #}
+            <td>{{entry.publishAt.strftime('%d-%b-%y')}}</td>
+            {% if entry.isPost %}
+              <td>Post</td>
+            {% else %}
+              <td>Page</td>
+            {% endif %}
             <td><a href="/deleteEntry/{{entry.id}}">Delete</a></td>
           </tr>
         {% endfor %}

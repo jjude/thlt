@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <div class="page">
@@ -10,7 +10,7 @@
 		<section class="listentries">
 			{% for entry in entries %}
 				<article class="entry">
-					<span class="entrymeta"><time pubdate="pubdate">{{entry.ptime.strftime('%d-%b-%y') }}</time></span>
+					<span class="entrymeta"><time pubdate="pubdate">{{entry.publishAt.strftime('%d-%b-%y') }}</time></span>
 					{% if entry.tagsHTML %}on: {{entry.tagsHTML}}{% endif %}
 					<h3><a href="/{{entry.slug}}/">{{entry.title}}</a></h3>
 					{% if entry.subtitle %}<p class="listentrysubtitle">{{entry.subtitle}}</p>{% endif %}

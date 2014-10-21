@@ -3,13 +3,13 @@
 	{% for entry in entries %}
   <url>
     <loc>{{entry.url}}</loc>
-    <lastmod>{{entry.ptime.strftime('%d-%b-%y %H:%M') }}</lastmod>
+    <lastmod>{{entry.publishAt.strftime('%d-%m-%y') }}</lastmod>
   </url>
 	{% endfor %}
 	{% for tag in tags %}
 	<url>
 		<loc>{{site.url}}/tags/{{tag}}</loc>
-		<lastmod>{{envDetails.gTime.strftime('%d-%b-%y %H:%M')}}</lastmod>
+		<lastmod>{{envDetails.gTime.strftime('%d-%m-%y')}}</lastmod>
 	</url>
 	{% endfor %}
 

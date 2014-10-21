@@ -1,5 +1,4 @@
-{% extends "layout.html" %}
-
+{% extends "base.html" %}
 {% block content %}
 <div class="page">
 	<article>
@@ -11,39 +10,40 @@
 
 			{% if entry.type == 'post' %}
 				<span class="entrymeta">
-					<a href="/">Joseph Jude </a>on <time pubdate="pubdate">{{entry.ptime.strftime('%d-%b-%y')}}</time>
+					<a href="/">Joseph Jude </a>on <time pubdate="pubdate">{{entry.publishAt.strftime('%d-%b-%y')}}</time>
 				</span>
 			{% endif %}
 		</header>
 		<section class="pagecontent">
 			{{entry.content}}
-		</section>
 
-		{% if entry.type == 'post' %}
-			{% if entry.tagsHTML %}<div class="tag">Tags: {{entry.tagsHTML}}</div><hr class="symbol">{% endif %}
-			<div class="share">
-				<h4>Like it? Share it</h4>
-				{% if entry.HTML %}
-					<p>Tweet now to your friends, or talk to me on the twitter. If you liked it, favorite it.</p> {{entry.tweetHTML}}
-					<p>Not on twitter? No problem. <a href="mailto:cephire@jjude.com">Email</a> me your comments.</p>
-				{% endif %}
-				<p class="social-icons">
-					<a href="http://twitter.com/share?text={{entry.title}} by @jjude:">
-						<i class="social-icons fa fa-twitter fa-lg fa-border"></i>
-					</a>
-					<a href="https://www.facebook.com/sharer/sharer.php?u={{entry.url}}">
-						<i class="social-icons fa fa-facebook fa-lg fa-border"></i>
-					</a>
-					<a href="https://plus.google.com/share?url={{entry.url}}">
-						<i class="social-icons fa fa-google-plus fa-lg fa-border"></i>
-					</a>
-				</p>
-			</div> <!--share-->
-			{% if site.disqusName %}
-				{% include "includes/disqus.html" %}
+			{% if entry.type == 'post' %}
+					<footer>
+					{% if entry.tagsHTML %}<div class="tag">Tags: {{entry.tagsHTML}}</div><hr class="symbol">{% endif %}
+					<div class="share">
+						<h4>Like it? Share it</h4>
+						{% if entry.HTML %}
+							<p>Tweet now to your friends, or talk to me on the twitter. If you liked it, favorite it.</p> {{entry.tweetHTML}}
+							<p>Not on twitter? No problem. <a href="mailto:cephire@jjude.com">Email</a> me your comments.</p>
+						{% endif %}
+						<p class="social-icons">
+							<a href="http://twitter.com/share?text={{entry.title}} by @jjude:">
+								<i class="social-icons fa fa-twitter fa-lg fa-border"></i>
+							</a>
+							<a href="https://www.facebook.com/sharer/sharer.php?u={{entry.url}}">
+								<i class="social-icons fa fa-facebook fa-lg fa-border"></i>
+							</a>
+							<a href="https://plus.google.com/share?url={{entry.url}}">
+								<i class="social-icons fa fa-google-plus fa-lg fa-border"></i>
+							</a>
+						</p>
+					</div> <!--share-->
+					{% if site.disqusName %}
+						{% include "includes/disqus.html" %}
+					{% endif %}
+				<footer>
 			{% endif %}
-
-		{% endif %}
+		</section>
 	</article>
 
 {% endblock %}

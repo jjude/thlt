@@ -12,37 +12,30 @@ import pprint
 from flask import session
 from datetime import timedelta
 
-# login_decorator
-from functools import wraps
-
-# flask-peewee database
-from peewee import *
-from flask_peewee.db import Database
-from flask_peewee.utils import get_object_or_404, slugify
-
 # import our app
 from app import app, db
 
 # import models
 from models import User, Site, Entry
-from auth import *
-from hashlib import md5
 
 # other python ops
 from shutil import copytree, rmtree
 import os
 import datetime
+from sqlalchemy.exc import IntegrityError
+from hashlib import md5
+from slugify import slugify
 
 # TODO: implement flash, csrf in forms
 
-# decorator
-def login_required(f):
-	@wraps(f)
-	def decorated_function(*args, **kwargs):
-		if "userId" in session and session["userId"] != 0:
-			return f(*args, **kwargs)
-		return redirect('/signin/')
-	return decorated_function
+# decorators
+from decorators import login_required, async
+
+baseDir = os.path.abspath(os.path.dirname(__file__))
+
+################################################################
+# utility functions
+################################################################
 
 def auth_user(user):
 	session.permanent = True
@@ -55,45 +48,37 @@ def auth_user(user):
 # create new Entry
 # EntryValues as dict
 def createEntry(siteId, entryValues):
-	try:
-		with db.database.transaction():
-			newEntry = Entry.create(
-					title		= entryValues['title'],
-					subTitle = entryValues['subTitle'],
-					slug		 = entryValues['slug'] if 'slug' in entryValues else slugify(title),
-					tags		 = entryValues['tags'],
-					excerpt	= entryValues['excerpt'],
-					tweetId	= entryValues['tweetId'],
-					content	= entryValues['content'],
-					ptime		= entryValues['ptime'] if 'ptime' in entryValues else datetime.datetime.now(),
-					isPage	 = 0 if entryValues['isPage'] == '0' else 1,
-					site		 = siteId
-					)
-	except Exception as e:
-		# TODO: logging
-			print e.message
+	newEntry = Entry(
+				title     = entryValues['title'],
+				subtitle  = entryValues['subtitle'],
+				slug      = entryValues['slug'] if 'slug' in entryValues else slugify(title),
+				tags      = entryValues['tags'],
+				excerpt   = entryValues['excerpt'],
+				tweetId   = entryValues['tweetId'],
+				content   = entryValues['content'],
+				publishAt = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.datetime.now(),
+				isPost    = entryValues['isPost'],
+				site      = siteId
+				)
+	db.session.add(newEntry)
+	db.session.commit()
 	return
 
 # update existing entry
 # EntryValues as dict
 def updateEntry(entryId, entryValues):
-	entry = Entry.get(Entry.id == entryId)
+	entry = Entry.query.get(entryId)
 	if entry:
-		try:
-			with db.database.transaction():
-				entry.title		= entryValues['title']
-				entry.subTitle = entryValues['subTitle']
-				entry.slug		 = entryValues['slug'] if 'slug' in entryValues else slugify(entryValues['title'])
-				entry.tags		 = entryValues['tags']
-				entry.excerpt	= entryValues['excerpt']
-				entry.tweetId	= entryValues['tweetId']
-				entry.content	= entryValues['content']
-				entry.ptime		= entryValues['ptime'] if 'ptime' in entryValues else datetime.datetime.now()
-				entry.isPage	 = entryValues['isPage']
-				entry.save()
-		except Exception as e:
-			# TODO: logging
-			print e
+		entry.title     = entryValues['title']
+		entry.subtitle  = entryValues['subtitle']
+		entry.slug      = entryValues['slug'] if 'slug' in entryValues else slugify(entryValues['title'])
+		entry.tags      = entryValues['tags']
+		entry.excerpt   = entryValues['excerpt']
+		entry.tweetId   = entryValues['tweetId']
+		entry.content   = entryValues['content']
+		entry.publishAt = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.datetime.now()
+		entry.isPost    = entryValues['isPost']
+		db.session.commit()
 	return
 
 
@@ -113,32 +98,34 @@ def signup():
 
 		if email and password:
 			try:
-				with db.database.transaction():
-					user = User.create(email = email,
-							password = md5(password).hexdigest())
-					auth_user(user) #sets user as authenticated in session
-					return redirect('/mysites/')
-			except IntegrityError:
+				newUser          = User()
+				newUser.email    = email
+				newUser.password = md5(password).hexdigest()
+				db.session.add(newUser)
+				db.session.commit()
+				auth_user(newUser) #sets user as authenticated in session
+				return redirect('/mysites/')
+			except IntegrityError as error:
 				flash("Did you signup already? Try signin")
+				app.logger.error('Error while signing up: %s' % error)
 
 	return render_template('users/signup.html')
 
 @app.route('/signin/', methods=['GET', 'POST'])
 def signin():
 	if request.method == 'POST':
-		email		= request.form['email']
+		email    = request.form['email']
 		password = request.form['password']
 
 		if email and password:
-			try:
-				user = User.get(email = email,
-						password = md5(password).hexdigest())
-				flash("Did you already signup? Try to signin")
-			except User.DoesNotExist:
-				flash("User Id or Password is Incorrect")
-			else:
+			user = User.query.filter_by(email = email,
+						password = md5(password).hexdigest()).first()
+			if user is not None:
 				auth_user(user)
 				return redirect('/mysites/')
+			else:
+				flash("User Id or Password is Incorrect")
+				app.logger.error('user id %s is wrong' % email)
 	return render_template('/users/signin.html')
 
 @app.route('/signout/')
@@ -159,75 +146,72 @@ def newsite():
 		if not request.form['url']:
 			flash ("URL is required")
 
-		try:
-			with db.database.transaction():
-				newSite = Site.create(
-					name					= request.form['sitename'],
-					nickname			= request.form['nickname'],
-					tagline			 = request.form['tagline'],
-					description	 = request.form['description'],
-					url					 = request.form['url'],
-					statcounterId = request.form['statcounterId'],
-					gAnalytics		= request.form['gAnalytics'],
-					disqusName		= request.form['disqusName'],
-					destDir			 = request.form['destDir'],
-					user					= session["userId"]
-					)
-				siteFilesDir = 'siteFiles/' + str(newSite.id) + '/template'
-				copytree ('siteTemplate', siteFilesDir)
-		except Exception as e:
-			# TODO: logging
-			print e.message
-		else:
-			return redirect('/mysites/')
+		newSite = Site(
+			name          = request.form['sitename'],
+			nickname      = request.form['nickname'],
+			tagline       = request.form['tagline'],
+			description   = request.form['description'],
+			url           = request.form['url'],
+			statcounterId = request.form['statcounterId'],
+			clickyId      = request.form['clickyId'],
+			gAnalytics    = request.form['gAnalytics'],
+			disqusName    = request.form['disqusName'],
+			destDir       = request.form['destDir'],
+			owner         = session["userId"]
+		)
+		db.session.add(newSite)
+		db.session.commit()
+
+		siteFilesDir = 'siteFiles/' + str(newSite.id) + '/template'
+		copytree(os.path.join(baseDir,'..','siteTemplate'), os.path.join(baseDir,siteFilesDir))
+		return redirect('/mysites/')
 	return render_template('/sites/newsite.html')
 
 @app.route('/mysites/')
 @login_required
 def mysites():
-	mySites = Site.select().join(User).where(User.id == session["userId"])
+	mySites = User.query.get(session['userId']).sites.all()
 	return render_template('/sites/mysites.html', mySites = mySites)
 
 @app.route('/deleteSite/<int:siteId>/')
 @login_required
 def deleteSite(siteId):
 	try:
-		with db.database.transaction():
-			siteToDelete = Site.get(Site.id == siteId)
-			# delete all entries too
-			siteToDelete.delete_instance(recursive=True)
+		siteToDelete = Site.query.get(siteId)
+		db.session.delete(siteToDelete)
+		db.session.commit()
 
-			siteFilesDir = 'siteFiles/' + str(siteId)
-			if os.path.isdir(siteFilesDir):
-				rmtree(siteFilesDir)
+		siteFilesDir = 'siteFiles/' + str(siteId)
+		if os.path.isdir(siteFilesDir):
+			rmtree(siteFilesDir)
 	except Exception as e:
 		# TODO: logging
-		print e.message
+		app.logger.error('Error while deleting site:%s is:%s' % (str(siteToDelete.id), e.message))
 
 	return redirect('/mysites/')
 
 @app.route('/editSite/<int:siteId>/', methods=['GET','POST'])
 @login_required
 def editSite(siteId):
-	site = get_object_or_404(Site, Site.id == siteId)
+	site = Site.query.get(siteId)
 	if request.method == 'POST':
 		if not request.form['sitename']:
 			flash ("Sitename is required")
 
 		try:
-			with db.database.transaction():
-				site.name					= request.form['sitename']
-				site.tagline			 = request.form['tagline']
-				site.description	 = request.form['description']
-				site.statcounterId = request.form['statcounterId']
-				site.gAnalytics		= request.form['gAnalytics']
-				site.disqusName		= request.form['disqusName']
-				site.destDir			 = request.form['destDir']
-				site.save()
-				flash("Your changes are saved")
+			site.name          = request.form['sitename']
+			site.tagline       = request.form['tagline']
+			site.description   = request.form['description']
+			site.statcounterId = request.form['statcounterId']
+			site.clickyId           = request.form['clickyId']
+			site.gAnalytics    = request.form['gAnalytics']
+			site.disqusName    = request.form['disqusName']
+			site.destDir       = request.form['destDir']
+			db.session.commit()
+			flash("Your changes are saved")
 		except Exception as e:
-			# TODO: logging
-				print e.message
+		# TODO: logging
+			app.logger.error('Error while editing site:%s is:%s' % (str(site.id),e.message))
 		else:
 			return redirect('/mysites/')
 
@@ -236,10 +220,11 @@ def editSite(siteId):
 @app.route('/displaySite/<int:siteId>/')
 @login_required
 def displaySite(siteId):
-	entries = Entry.select().join(Site).where(Site.id == siteId).order_by(Entry.ptime.desc())
-	site = Site.get(Site.id == siteId)
-	session['siteId'] = siteId
+	site                    = Site.query.get(siteId)
+	entries                 = site.entries.order_by(Entry.publishAt.desc())
+	session['siteId']       = siteId
 	session['siteNickName'] = site.nickname
+
 	return render_template('/sites/displaysite.html', entries = entries, site = site)
 
 @app.route('/generateSite/<int:siteId>/')
@@ -250,7 +235,7 @@ def generateSite(siteId):
 	from jinja2 import Environment, FileSystemLoader
 	import markdown2 as md
 
-	site = Site.get(Site.id == siteId)
+	site = Site.query.get(siteId)
 
 	# site details
 	siteDetails							 = {}
@@ -259,6 +244,7 @@ def generateSite(siteId):
 	siteDetails['tagline']		= site.tagline
 	siteDetails['gAnalytics'] = site.gAnalytics if site.gAnalytics else ''
 	siteDetails['disqusName'] = site.disqusName if site.disqusName else ''
+	siteDetails['clickyId'] = site.clickyId if site.clickyId else ''
 	if site.statcounterId:
 		projectId, securityId = site.statcounterId.split(';')
 		siteDetails['statcounterProjectId']	= projectId
@@ -267,10 +253,10 @@ def generateSite(siteId):
 		siteDetails['statcounterId'] = ''
 
 	# user details
-	userDetails						= {}
-	userDetails['name']		= site.user.name
-	userDetails['twitter'] = site.user.twitter
-	userDetails['gplus']	 = site.user.gplus
+	userDetails            = {}
+	userDetails['name']    = site.owner.name
+	userDetails['twitter'] = site.owner.twitter
+	userDetails['gplus']   = site.owner.gplus
 
 	envDetails = {}
 	# TODO: this needs to be magically set
@@ -278,15 +264,14 @@ def generateSite(siteId):
 	# generated time
 	envDetails['gTime'] = datetime.datetime.now()
 
-	templateBaseDir = os.path.join('siteFiles', str(site.id), 'template')
-	outDir          = os.path.join('output', str(site.id), 'html')
+	templateBaseDir = os.path.join(baseDir, 'siteFiles', str(site.id), 'template')
+	outDir          = os.path.join(baseDir, 'output', str(site.id), 'html')
 	assetsDir       = os.path.join(templateBaseDir, 'assets')
 
 	if os.path.exists(outDir):
-		print "%s path exists" % outDir
 		rmtree(outDir, ignore_errors=True)
 	else:
-		print "%s path doesnt exists" % outDir
+		app.logger.error("%s path doesnt exists" % outDir)
 
 	#os.makedirs(outDir)
 	# copy assets dir
@@ -308,8 +293,8 @@ def generateSite(siteId):
 	onlyPosts = []
 	# TODO: sqlite as in-momory db
 
-	for entry in site.entries.order_by(Entry.ptime.desc()):
-		print "generating %s" % entry.title
+	for entry in site.entries.order_by(Entry.publishAt.desc()):
+		#print "generating %s" % entry.title
 		if entry.tags and entry.tags is not None and entry.tags != 'None':
 			tagsHTML = '|'.join(["<a href=/tags/%s/>%s</a>" % (tag.strip(), tag.strip()) \
 													for tag in entry.tags.split(",")])
@@ -322,15 +307,14 @@ def generateSite(siteId):
 		# as content is not needed for siteTags
 		entryDetails = {}
 		entryDetails['title'] = entry.title
-		if entry.subTitle is not None or entry.subTitle != 'null':
-			entryDetails['subTitle'] = entry.subTitle
-		else:
-			entryDetails['subTitle'] = ''
+		entryDetails['subtitle'] = entry.subtitle
+		if entry.subtitle is None or entry.subtitle == 'null' or entry.subtitle == 'None':
+			entryDetails['subtitle'] = ''
 		entryDetails['slug'] = entry.slug
 		entryDetails['url'] = site.url + '/' + entry.slug + '/'
-		entryDetails['type'] = 'post' if entry.isPage == 0 else 'page'
+		entryDetails['type'] = 'post' if entry.isPost == 1 else 'page'
 		entryDetails['excerpt'] = entry.excerpt
-		entryDetails['ptime'] = entry.ptime
+		entryDetails['publishAt'] = entry.publishAt
 		entryDetails['tagsHTML'] = tagsHTML
 		entryDetails['tags'] = entry.tags
 
@@ -353,7 +337,7 @@ def generateSite(siteId):
 		# push to allEntries
 		# this is used to generate both main index & sitemap
 		allEntries.append(entryDetails)
-		if entry.isPage == 0:
+		if entry.isPost == 1:
 			onlyPosts.append(entryDetails)
 
 		# create individual posts
@@ -441,12 +425,9 @@ def generateSite(siteId):
 	remoteFolder = destDir + '/'
 	rsyncArguments.append(localFolder)
 	rsyncArguments.append(destDir)
-	print rsyncArguments
 	returncode = subprocess.call(["rsync"] + rsyncArguments)
-	if returncode == 0:
-		print "sync successfull"
-	else:
-		print "sync failed with %s " % str(returncode)
+	if returncode != 0:
+		app.logger.error('sync failed with %s' % str(returncode))
 
 	return redirect('/mysites/')
 
@@ -464,7 +445,7 @@ def insertFromFiles():
 
 	Blog:
 	Title:
-	subTitle:
+	subtitle:
 
 	date: <datetime> #publish at this time(Jun 1 2005	24:33);
 				if not present, publish immediately
@@ -479,12 +460,12 @@ def insertFromFiles():
 	"""
 
 	dirToRead = 'userFiles/%s' % session['userId']
+	dirToRead = os.path.join(baseDir, dirToRead)
 	for fileName in os.listdir(dirToRead):
 		fileName = os.path.join(dirToRead, fileName)
-		print "dealing with %s" % fileName
 		if fileName.endswith('.md'):
 			with open(fileName, 'r') as entry:
-				fileContent = entry.read()
+				fileContent = unicode(entry.read(),'utf8')
 				metadata, postContent = fileContent.split('---')
 				postMeta = yaml.load(metadata)
 
@@ -492,37 +473,31 @@ def insertFromFiles():
 				# sitesUpdated will contain list of sites into which entries were
 				# inserted. this is used to generate these sites once insertion is
 				# complete
-				sitesUpdated = []
-				EntryValues  = {}
-				EntryValues['title']    = postMeta['title'] if 'title' in postMeta else ''
-				EntryValues['subTitle'] = postMeta['subtitle'] if 'subtitle' in postMeta else ''
-				EntryValues['ptime']    = datetime.datetime.strptime(postMeta['date'][:16], '%Y-%m-%d %H:%M') if 'date' in postMeta else ''
-				EntryValues['slug']     = postMeta['slug'] if 'slug' in postMeta else slugify(EntryValues['title'])
-				EntryValues['tags']     = postMeta['tags'] if 'tags' in postMeta else ''
-				EntryValues['tweetId']  = postMeta['tweetId'] if 'tweetId' in postMeta else ''
-				EntryValues['excerpt']  = postMeta['excerpt'] if 'excerpt' in postMeta else ''
+				sitesUpdated             = []
+				EntryValues              = {}
+				EntryValues['title']     = postMeta['title'] if 'title' in postMeta else ''
+				EntryValues['subtitle']  = postMeta['subtitle'] if 'subtitle' in postMeta else ''
+				EntryValues['publishAt'] = datetime.datetime.strptime(postMeta['date'][:16], '%Y-%m-%d %H:%M') if 'date' in postMeta else ''
+				EntryValues['slug']      = postMeta['slug'] if 'slug' in postMeta else slugify(EntryValues['title'])
+				EntryValues['tags']      = postMeta['tags'] if 'tags' in postMeta else ''
+				EntryValues['tweetId']   = postMeta['tweetId'] if 'tweetId' in postMeta else ''
+				EntryValues['excerpt']   = postMeta['excerpt'] if 'excerpt' in postMeta else ''
 				#if there was empty lines in the begining or at the end
 				EntryValues['content']	= postContent.strip()
-				EntryValues['isPage']	 = 0 if postMeta['type'] == 'post' else 1
+				EntryValues['isPost']	 = 1 if postMeta['type'] == 'post' else 0
 
-				try:
-					site = Site.get(Site.nickname == blogName)
-				except Site.DoesNotExist:
-					site = None
+				site = Site.query.filter_by(nickname=blogName).first()
 				if site:
-					try:
-						entry = Entry.get(Entry.slug == EntryValues['slug'])
-					except Entry.DoesNotExist:
-						entry = None
-					sitesUpdated.append(site.id)
+					entry = Entry.query.filter_by(slug=EntryValues['slug']).first()
 					if entry:
 						# existing entry; update it
 						updateEntry(entry.id, EntryValues)
+						sitesUpdated.append(site.id)
 					else:
 						# create a new entry
 						createEntry(site.id, EntryValues)
-					# os.remove(fileName)
-	print "sites inserted: %s" % sitesUpdated
+						sitesUpdated.append(site.id)
+					os.remove(fileName)
 	return redirect('/mysites/')
 
 @app.route('/exportSite/<int:siteId>/')
@@ -530,22 +505,21 @@ def insertFromFiles():
 def exportSite(siteId):
 	import os
 
-	site = Site.get(Site.id == siteId)
+	site = Site.query.get(id=siteId)
 
 	outDir = os.path.join('output', str(siteId), 'export')
 	if os.path.exists(outDir):
-		print "%s exists, going to delete it" % outDir
 		rmtree(outDir)
 
 	os.makedirs(outDir)
 
-	for entry in site.entries.order_by(Entry.ptime.desc()):
-		if entry.isPage == '1':
-			entryType = 'page'
-		else:
+	for entry in site.entries.order_by(Entry.publishAt.desc()):
+		if entry.isPost == '1':
 			entryType = 'post'
+		else:
+			entryType = 'page'
 
-		entryFileName = "%s-%s.md" % (datetime.datetime.strftime(entry.ptime, '%Y'), entry.slug)
+		entryFileName = "%s-%s.md" % (datetime.datetime.strftime(entry.publishAt, '%Y'), entry.slug)
 		exportContent = """blog: %s
 id: %s
 title: %s
@@ -558,7 +532,7 @@ type: %s
 excerpt: %s
 ---
 %s
-""" % (site.nickname, entry.id, entry.title, entry.subTitle, entry.ptime,
+""" % (site.nickname, entry.id, entry.title, entry.subtitle, entry.publishAt,
 					entry.slug, entry.tags, entry.tweetId, entryType, entry.excerpt,
 					entry.content)
 		with open(os.path.join(outDir, entryFileName), "wb") as fileToSave:
@@ -581,23 +555,23 @@ def newEntry():
 			flash('Title is required')
 			return render_template('/entries/newEntry.html', siteNickName = session['siteNickName'])
 
-		entryValues = {}
-		entryValues['title']		= request.form['title']
-		entryValues['subTitle'] = request.form['subTitle']
-		entryValues['slug']		 = request.form['slug'] if request.form['slug'] else slugify(request.form['title'])
-		entryValues['tags']		 = request.form['tags']
-		entryValues['excerpt']	= request.form['excerpt']
-		entryValues['tweetId']	= request.form['tweetId']
-		entryValues['content']	= request.form['content']
-		entryValues['ptime']		= datetime.datetime.strptime(request.form['ptime'][:16], '%Y-%m-%d %H:%M') if request.form['ptime'] else datetime.datetime.now()
-		entryValues['isPage']	 = request.form['type'] if request.form['type'] == '0' else 1
+		entryValues              = {}
+		entryValues['title']     = request.form['title']
+		entryValues['subtitle']  = request.form['subtitle']
+		entryValues['slug']      = request.form['slug'] if request.form['slug'] else slugify(request.form['title'])
+		entryValues['tags']      = request.form['tags']
+		entryValues['excerpt']   = request.form['excerpt']
+		entryValues['tweetId']   = request.form['tweetId']
+		entryValues['content']   = request.form['content']
+		entryValues['publishAt'] = datetime.datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.datetime.now()
+		entryValues['isPost']    = 1 if request.form['type'] == '0' else 0
 
 		createEntry(session['siteId'], entryValues)
 
 		siteURL = '/displaySite/%s' % session['siteId']
 		return redirect(siteURL)
 
-	return render_template('/entries/newEntry.html', siteNickName = session['siteNickName'])
+	return render_template('/entries/newentry.html', siteNickName = session['siteNickName'])
 
 @app.route('/editEntry/<int:entryId>/', methods = ['GET', 'POST'])
 @login_required
@@ -609,23 +583,23 @@ def editEntry(entryId):
 		if not request.form['title']:
 			flash('title is mandatory')
 
-	entry = get_object_or_404(Entry, Entry.id == entryId)
+	entry = Entry.query.get(entryId)
 	if request.method == 'POST':
 		if not request.form['title']:
 			flash("title is mandatory")
 			siteURL = '/displaySite/%s' % session['siteId']
 			return redirect(siteURL)
 
-		EntryValues						 = {}
-		EntryValues['title']		= request.form['title']
-		EntryValues['subTitle'] = request.form['subTitle']
-		EntryValues['slug']		 = request.form['slug'] if request.form['slug'] else slugify(request.form['title'])
-		EntryValues['tags']		 = request.form['tags']
-		EntryValues['excerpt']	= request.form['excerpt']
-		EntryValues['tweetId']	= request.form['tweetId']
-		EntryValues['content']	= request.form['content']
-		EntryValues['ptime']		= datetime.datetime.strptime(request.form['ptime'][:16], '%Y-%m-%d %H:%M') if request.form['ptime'] else datetime.datetime.now()
-		EntryValues['isPage']	 = 0 if request.form['type'] == '0' else 1
+		EntryValues              = {}
+		EntryValues['title']     = request.form['title']
+		EntryValues['subtitle']  = request.form['subtitle']
+		EntryValues['slug']      = request.form['slug'] if request.form['slug'] else slugify(request.form['title'])
+		EntryValues['tags']      = request.form['tags']
+		EntryValues['excerpt']   = request.form['excerpt']
+		EntryValues['tweetId']   = request.form['tweetId']
+		EntryValues['content']   = request.form['content']
+		EntryValues['publishAt'] = datetime.datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.datetime.now()
+		EntryValues['isPost']    = 1 if request.form['type'] == '0' else 0
 
 		updateEntry(entryId, EntryValues)
 
@@ -636,14 +610,9 @@ def editEntry(entryId):
 @app.route('/deleteEntry/<int:entryId>/')
 @login_required
 def deleteEntry(entryId):
-	try:
-		with db.database.transaction():
-			entryToDelete = Entry.get(Entry.id == entryId)
-			entryToDelete.delete_instance()
-
-	except Exception as e:
-		# TODO: logging
-		print e.message
+	entryToDelete = Entry.query.get(entryId)
+	db.session.delete(entryToDelete)
+	db.session.commit()
 
 	siteURL = '/displaySite/%s' % session['siteId']
 	return redirect(siteURL)

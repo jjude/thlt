@@ -55,11 +55,16 @@
 		{% endif %}
   </head>
 
-  <body class="wrapper">
+  <body>
       {% block content %}{% endblock %}
 
 			{% if envDetails.env != 'dev' and site.statcounterId %}
 				{% include "includes/statcounter.html" %}
 			{% endif %}
+
+      {% if envDetails.env != 'dev' and site.clickyId %}
+        {% include "includes/clicky.html" %}
+      {% endif %}
+
   </body>
 </html>
