@@ -3,3 +3,6 @@ prod_settings.py
 siteFiles
 synclogs
 thltapp.log
+sync
+thlt.db
+userFiles

@@ -49,8 +49,7 @@ from fabric.api import run, cd, env, lcd, put, local, abort, settings
 from fabric.contrib.project import rsync_project
 from fabric import utils
 from fabric.decorators import hosts
-
-localAppDir = '/Users/cephire/code/thltpy/thlt'
+import os
 
 RSYNC_EXCLUDE = (
     '.DS_Store',
@@ -67,6 +66,8 @@ RSYNC_EXCLUDE = (
     'run_dev.sh',
     'requirements.txt',
     'lib',
+    'output',
+    'synclogs',
 )
 
 # the user for remote commands
@@ -77,17 +78,19 @@ env.remoteVEnvRoot = '/home/id804097/webapps/thltflask'
 env.remoteRoot = '/home/id804097/webapps/thltflask/thltapp'
 # end with trailing slash so that it is a dir-to-dir sync
 # without /, thlt directory will be created in remoteRoot
-env.localDir = '/Users/cephire/code/thltpy/thlt/'
+env.localDir = os.path.abspath(os.path.dirname(__file__)) + '/'
 
 
 def deploy():
   print_header('Staring to deploy')
   with cd(env.remoteVEnvRoot):
     print_info ('Deploying in ...%s' % run('pwd'))
+    print_info ('Deploying from: %s' % env.localDir)
     #activate corresponding virtualenv and install required modules
     run('source thltenv/bin/activate')
     put('requirements.txt', 'requirements.txt')
     pipinstall = run('pip install -r requirements.txt')
+    run('deactivate')
     if pipinstall.succeeded:
       # by default, rsync will create a directory by name of local directory
       # in the remote root

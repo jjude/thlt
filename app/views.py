@@ -25,6 +25,7 @@ import datetime
 from sqlalchemy.exc import IntegrityError
 from hashlib import md5
 from slugify import slugify
+import htmlmin
 
 # TODO: implement flash, csrf in forms
 
@@ -268,7 +269,7 @@ def generateSite(siteId):
 	# generated time
 	envDetails['gTime'] = datetime.datetime.now()
 
-	templateBaseDir = os.path.join('siteFiles', str(site.id), 'template')
+	templateBaseDir = os.path.join(baseDir, 'siteFiles', str(site.id), 'template')
 	outDir          = os.path.join('output', str(site.id), 'html')
 	assetsDir       = os.path.join(templateBaseDir, 'assets')
 
@@ -349,23 +350,23 @@ def generateSite(siteId):
 		dirToCreate = os.path.join(outDir, entry.slug)
 		if not os.path.exists(dirToCreate):
 			os.makedirs(dirToCreate)
-		HTMLToStore = currentTemplate.render(site=siteDetails, entry=entryDetails, \
-									user=userDetails, envDetails=envDetails)
+		HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, entry=entryDetails, \
+									user=userDetails, envDetails=envDetails))
 		with open(os.path.join(outDir, entry.slug, 'index.html'), "wb") as fileToSave:
 			fileToSave.write(HTMLToStore.encode('utf-8'))
 
 	# once done with individual entries, create other ones
 	# create sitemaps
 	currentTemplate = thltEnv.get_template('sitemap.html')
-	HTMLToStore = currentTemplate.render(site=siteDetails, entries=allEntries, \
-								tags=siteTags.keys(), envDetails=envDetails)
+	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, entries=allEntries, \
+								tags=siteTags.keys(), envDetails=envDetails))
 	with open(os.path.join(outDir, 'sitemap.xml'), "wb") as fileToSave:
 		fileToSave.write(HTMLToStore)
 
 	# index
 	currentTemplate = thltEnv.get_template('index.html')
-	HTMLToStore = currentTemplate.render(site=siteDetails, entries=onlyPosts, \
-								 user=userDetails, envDetails=envDetails)
+	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, entries=onlyPosts, \
+								 user=userDetails, envDetails=envDetails))
 	with open(os.path.join(outDir, 'index.html'), "wb") as fileToSave:
 		fileToSave.write(HTMLToStore.encode('utf-8'))
 
@@ -374,8 +375,8 @@ def generateSite(siteId):
 	if not os.path.exists(dirToCreate):
 		os.makedirs(dirToCreate)
 	currentTemplate = thltEnv.get_template('tags.html')
-	HTMLToStore = currentTemplate.render(site=siteDetails, user=userDetails, \
-									envDetails=envDetails, tags=siteTags)
+	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, user=userDetails, \
+									envDetails=envDetails, tags=siteTags))
 	with open(os.path.join(outDir, 'tags', 'index.html'), "wb") as fileToSave:
 		fileToSave.write(HTMLToStore.encode('utf-8'))
 
@@ -385,8 +386,8 @@ def generateSite(siteId):
 		if not os.path.exists(dirToCreate):
 			os.makedirs(dirToCreate)
 		currentTemplate = thltEnv.get_template('tag.html')
-		HTMLToStore = currentTemplate.render(site=siteDetails, user=userDetails, \
-										envDetails=envDetails, tag=tag, entries=siteTags[tag])
+		HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, user=userDetails, \
+										envDetails=envDetails, tag=tag, entries=siteTags[tag]))
 		with open(os.path.join(outDir, 'tags', tag, 'index.html'), "wb") as fileToSave:
 			fileToSave.write(HTMLToStore.encode('utf-8'))
 
@@ -395,8 +396,8 @@ def generateSite(siteId):
 	if not os.path.exists(dirToCreate):
 		os.makedirs(dirToCreate)
 	currentTemplate = thltEnv.get_template('archives.html')
-	HTMLToStore = currentTemplate.render(site=siteDetails, user=userDetails, \
-									envDetails=envDetails, entries=onlyPosts)
+	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, user=userDetails, \
+									envDetails=envDetails, entries=onlyPosts))
 	with open(os.path.join(outDir, 'archives', 'index.html'), "wb") as fileToSave:
 		fileToSave.write(HTMLToStore.encode('utf-8'))
 

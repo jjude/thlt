@@ -74,10 +74,10 @@ class Site(db.Model):
 # TODO: a way to indicate missing values and not allow to save
 class Entry(db.Model):
   id        = db.Column(db.Integer, primary_key=True)
-  title     = db.Column(db.String(50))
-  subtitle  = db.Column(db.String(100))
-  slug      = db.Column(db.String(50))
-  tags      = db.Column(db.String(50))
+  title     = db.Column(db.String(150))
+  subtitle  = db.Column(db.String(150))
+  slug      = db.Column(db.String(200))
+  tags      = db.Column(db.String(100))
   excerpt   = db.Column(db.String(500))
   tweetId   = db.Column(db.String(20))
   tweetHTML = db.Column(db.String(100))
