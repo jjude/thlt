@@ -162,6 +162,7 @@ def newsite():
 			url           = request.form['url'],
 			statcounterId = request.form['statcounterId'],
 			gAnalytics    = request.form['gAnalytics'],
+			clickyId      = request.form['clickyId'],
 			disqusName    = request.form['disqusName'],
 			destDir       = request.form['destDir'],
 			owner         = session["userId"]
@@ -211,6 +212,7 @@ def editSite(siteId):
 			site.description   = request.form['description']
 			site.statcounterId = request.form['statcounterId']
 			site.gAnalytics    = request.form['gAnalytics']
+			site.clickyId      = request.form['clickyId']
 			site.disqusName    = request.form['disqusName']
 			site.destDir       = request.form['destDir']
 			db.session.commit()
@@ -244,12 +246,13 @@ def generateSite(siteId):
 	site = Site.query.get(siteId)
 
 	# site details
-	siteDetails							 = {}
-	siteDetails['name']			 = site.name
-	siteDetails['url']				= site.url
-	siteDetails['tagline']		= site.tagline
+	siteDetails				  = {}
+	siteDetails['name']		  = site.name
+	siteDetails['url']		  = site.url
+	siteDetails['tagline']	  = site.tagline
 	siteDetails['gAnalytics'] = site.gAnalytics if site.gAnalytics else ''
 	siteDetails['disqusName'] = site.disqusName if site.disqusName else ''
+	siteDetails['clickyId']   = site.clickyId if site.clickyId else ''
 	if site.statcounterId:
 		projectId, securityId = site.statcounterId.split(';')
 		siteDetails['statcounterProjectId']	= projectId
@@ -557,7 +560,7 @@ def newEntry():
 	if request.method == 'POST':
 		if not request.form['title']:
 			flash('Title is required')
-			return render_template('/entries/newEntry.html', siteNickName = session['siteNickName'])
+			return render_template('/entries/newentry.html', siteNickName = session['siteNickName'])
 
 		entryValues              = {}
 		entryValues['title']     = request.form['title']
@@ -575,7 +578,7 @@ def newEntry():
 		siteURL = '/displaySite/%s' % session['siteId']
 		return redirect(siteURL)
 
-	return render_template('/entries/newEntry.html', siteNickName = session['siteNickName'])
+	return render_template('/entries/newentry.html', siteNickName = session['siteNickName'])
 
 @app.route('/editEntry/<int:entryId>/', methods = ['GET', 'POST'])
 @login_required

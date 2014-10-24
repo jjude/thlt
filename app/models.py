@@ -40,6 +40,7 @@ class Site(db.Model):
   description   = db.Column(db.String(250))
   gTime         = db.Column(db.DateTime) #last generated time
   statcounterId = db.Column(db.String(20)) #projectid;securityid
+  clickyId      = db.Column(db.String(20))
   gAnalytics    = db.Column(db.String(20))
   disqusName    = db.Column(db.String(20))
   fbpageId      = db.Column(db.String(20))
@@ -58,6 +59,7 @@ class Site(db.Model):
     self.gTime         = datetime.now()
     self.statcounterId = kwargs.get('statcounterId', '')
     self.gAnalytics    = kwargs.get('gAnalytics', '')
+    self.clickyId      = kwargs.get('clickyId', '')
     self.disqusName    = kwargs.get('disqusName', '')
     self.fbpageId      = kwargs.get('fbpageId', '')
     self.destDir       = kwargs.get('destDir', '')

@@ -90,7 +90,6 @@ def deploy():
     run('source thltenv/bin/activate')
     put('requirements.txt', 'requirements.txt')
     pipinstall = run('pip install -r requirements.txt')
-    run('deactivate')
     if pipinstall.succeeded:
       # by default, rsync will create a directory by name of local directory
       # in the remote root
