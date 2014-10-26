@@ -19,7 +19,7 @@ from app import app, db
 from models import User, Site, Entry
 
 # other python ops
-from shutil import copytree, rmtree
+from shutil import copytree, rmtree, make_archive
 import os
 import datetime
 from sqlalchemy.exc import IntegrityError
@@ -82,6 +82,265 @@ def updateEntry(entryId, entryValues):
 		db.session.commit()
 	return
 
+@async
+def generateSiteAsync(siteId):
+	# flask by default looks for template in /template folder
+	# so we need to create a new environment
+	from jinja2 import Environment, FileSystemLoader
+	import markdown2 as md
+
+	site = Site.query.get(siteId)
+
+	# site details
+	siteDetails				  = {}
+	siteDetails['name']		  = site.name
+	siteDetails['url']		  = site.url
+	siteDetails['tagline']	  = site.tagline
+	siteDetails['gAnalytics'] = site.gAnalytics if site.gAnalytics else ''
+	siteDetails['disqusName'] = site.disqusName if site.disqusName else ''
+	siteDetails['clickyId']   = site.clickyId if site.clickyId else ''
+	if site.statcounterId:
+		projectId, securityId = site.statcounterId.split(';')
+		siteDetails['statcounterProjectId']	= projectId
+		siteDetails['statcounterSecurityId'] = securityId
+	else:
+		siteDetails['statcounterId'] = ''
+
+	# user details
+	userDetails            = {}
+	userDetails['name']    = site.owner.name
+	userDetails['twitter'] = site.owner.twitter
+	userDetails['gplus']   = site.owner.gplus
+
+	envDetails = {}
+	# TODO: this needs to be magically set
+	envDetails['env'] = app.config['ENVIRONMENT']
+	# generated time
+	envDetails['gTime'] = datetime.datetime.now()
+
+	templateBaseDir = os.path.join(baseDir, 'siteFiles', str(site.id), 'template')
+	outDir          = os.path.join('output', str(site.id), 'html')
+	assetsDir       = os.path.join(templateBaseDir, 'assets')
+
+	if os.path.exists(outDir):
+		rmtree(outDir, ignore_errors=True)
+	else:
+		app.logger.error("%s path doesnt exists" % outDir)
+
+	#os.makedirs(outDir)
+	# copy assets dir
+	copytree(assetsDir, outDir)
+
+	# it is expected that this directory exists
+	destDir = site.destDir
+
+	thltEnv = Environment(loader=FileSystemLoader(templateBaseDir))
+
+	# has unique tags
+	siteTags = {}
+	# siteTags will look like
+	# {'tag1': ['first-post', 'third-post'], 'tag2': ['third-post]'}
+
+	# allEntries contains both posts & pages (used for sitemap etc)
+	allEntries = []
+	# onlyposts excludes pages (used for index & feeds)
+	onlyPosts = []
+	# TODO: sqlite as in-momory db
+
+	for entry in site.entries.order_by(Entry.publishAt.desc()):
+		#print "generating %s" % entry.title
+		if entry.tags and entry.tags is not None and entry.tags != 'None':
+			tagsHTML = '|'.join(["<a href=/tags/%s/>%s</a>" % (tag.strip(), tag.strip()) \
+													for tag in entry.tags.split(",")])
+		else:
+			tagsHTML = ''
+
+		# this dict is writen into siteTags
+		# so content is writen into this dict after
+		# inserting into siteTags
+		# as content is not needed for siteTags
+		entryDetails = {}
+		entryDetails['title'] = entry.title
+		entryDetails['subtitle'] = entry.subtitle
+		if entry.subtitle is None or entry.subtitle == 'null' or entry.subtitle == 'None':
+			entryDetails['subtitle'] = ''
+		entryDetails['slug'] = entry.slug
+		entryDetails['url'] = site.url + '/' + entry.slug + '/'
+		entryDetails['type'] = 'post' if entry.isPost == 1 else 'page'
+		entryDetails['excerpt'] = entry.excerpt
+		entryDetails['publishAt'] = entry.publishAt
+		entryDetails['tagsHTML'] = tagsHTML
+		entryDetails['tags'] = entry.tags
+
+		# push tags into siteTags
+		# TODO: check if this can be done by in-memory sqlite
+		if entry.tags is not None:
+			for tag in entry.tags.split(','):
+				tag = tag.strip()
+				if tag in siteTags:
+					siteTags[tag].append(entryDetails)
+				else:
+					siteTags[tag] = []
+					siteTags[tag].append(entryDetails)
+
+		# now add content before generating the html
+		# convert content to markdown with extensions
+		entryDetails['content'] = md.markdown(entry.content,
+				extras=["fenced-code-blocks", "footnotes", "wiki-tables", "tables"])
+
+		# push to allEntries
+		# this is used to generate both main index & sitemap
+		allEntries.append(entryDetails)
+		if entry.isPost == 1:
+			onlyPosts.append(entryDetails)
+
+		# create individual posts
+		currentTemplate = thltEnv.get_template('post.html')
+		dirToCreate = os.path.join(outDir, entry.slug)
+		if not os.path.exists(dirToCreate):
+			os.makedirs(dirToCreate)
+		HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, entry=entryDetails, \
+									user=userDetails, envDetails=envDetails))
+		with open(os.path.join(outDir, entry.slug, 'index.html'), "wb") as fileToSave:
+			fileToSave.write(HTMLToStore.encode('utf-8'))
+
+	# once done with individual entries, create other ones
+	# create sitemaps
+	currentTemplate = thltEnv.get_template('sitemap.html')
+	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, entries=allEntries, \
+								tags=siteTags.keys(), envDetails=envDetails))
+	with open(os.path.join(outDir, 'sitemap.xml'), "wb") as fileToSave:
+		fileToSave.write(HTMLToStore)
+
+	# index
+	currentTemplate = thltEnv.get_template('index.html')
+	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, entries=onlyPosts, \
+								user=userDetails, envDetails=envDetails))
+	with open(os.path.join(outDir, 'index.html'), "wb") as fileToSave:
+		fileToSave.write(HTMLToStore.encode('utf-8'))
+
+	# tags
+	dirToCreate = os.path.join(outDir, 'tags')
+	if not os.path.exists(dirToCreate):
+		os.makedirs(dirToCreate)
+	currentTemplate = thltEnv.get_template('tags.html')
+	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, user=userDetails, \
+									envDetails=envDetails, tags=siteTags))
+	with open(os.path.join(outDir, 'tags', 'index.html'), "wb") as fileToSave:
+		fileToSave.write(HTMLToStore.encode('utf-8'))
+
+	# individual tag
+	for tag in siteTags:
+		dirToCreate = os.path.join(outDir, 'tags', tag)
+		if not os.path.exists(dirToCreate):
+			os.makedirs(dirToCreate)
+		currentTemplate = thltEnv.get_template('tag.html')
+		HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, user=userDetails, \
+										envDetails=envDetails, tag=tag, entries=siteTags[tag]))
+		with open(os.path.join(outDir, 'tags', tag, 'index.html'), "wb") as fileToSave:
+			fileToSave.write(HTMLToStore.encode('utf-8'))
+
+	# archives
+	dirToCreate = os.path.join(outDir, 'archives')
+	if not os.path.exists(dirToCreate):
+		os.makedirs(dirToCreate)
+	currentTemplate = thltEnv.get_template('archives.html')
+	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, user=userDetails, \
+									envDetails=envDetails, entries=onlyPosts))
+	with open(os.path.join(outDir, 'archives', 'index.html'), "wb") as fileToSave:
+		fileToSave.write(HTMLToStore.encode('utf-8'))
+
+	# feeds
+	# only 10 posts
+	currentTemplate = thltEnv.get_template('feeds.html')
+	HTMLToStore = currentTemplate.render(site=siteDetails, user=userDetails, \
+									envDetails=envDetails, entries=onlyPosts[:10])
+	with open(os.path.join(outDir, 'feed.xml'), "wb") as fileToSave:
+		fileToSave.write(HTMLToStore.encode('utf-8'))
+
+	# now start transfering the files to destDir
+	# using subprocess to sync two folders
+	# TODO: will have to use ssh to sync a remote folder
+	# Ref: https://code.google.com/p/remotefoldersync/source/browse/trunk/ssh.py
+	# or fabric project
+
+	import subprocess
+	logFile = str(site.id) + 'sync.log'
+	dirToCreate = 'synclogs'
+	if not os.path.exists(dirToCreate):
+		os.makedirs(dirToCreate)
+
+	# ref: http://stackoverflow.com/a/22757221/770719
+	# ref: http://sharats.me/the-ever-useful-and-neat-subprocess-module.html
+	# rsyncArguments = ["-avzr", "--delete", "--exclude='.*'"]
+	rsyncArguments = ["-avzr", "--delete"]
+	rsyncArguments.append("--log-file=" + os.path.join(dirToCreate, logFile))
+	localFolder = outDir + '/'
+	remoteFolder = destDir + '/'
+	rsyncArguments.append(localFolder)
+	rsyncArguments.append(destDir)
+	returncode = subprocess.call(["rsync"] + rsyncArguments)
+	if returncode != 0:
+		app.logger.error('sync failed with %s' % str(returncode))
+	return
+
+@async
+def exportSiteAsync(siteId):
+	import os
+
+	site = Site.query.get(siteId)
+
+	outDir = os.path.join('output', str(siteId), 'entries')
+	if os.path.exists(outDir):
+		rmtree(outDir)
+
+	os.makedirs(outDir)
+
+	for entry in site.entries.order_by(Entry.publishAt.desc()):
+		if entry.isPost == '1':
+			entryType = 'post'
+		else:
+			entryType = 'page'
+
+		entryYear = datetime.datetime.strftime(entry.publishAt, '%Y')
+		entryMonth = datetime.datetime.strftime(entry.publishAt, '%m')
+		entryFileName = "%s-%s-%s.md" % (entryYear, entryMonth, entry.slug)
+		exportContent = """blog: %s
+id: %s
+title: %s
+subtitle: %s
+date: %s
+slug: %s
+tags: %s
+tweetId: %s
+type: %s
+excerpt: %s
+---
+%s
+""" % (site.nickname, entry.id, entry.title, entry.subtitle, entry.publishAt,
+					entry.slug, entry.tags, entry.tweetId, entryType, entry.excerpt,
+					entry.content)
+		with open(os.path.join(outDir, entryFileName), "wb") as fileToSave:
+			fileToSave.write(exportContent.encode('utf-8'))
+
+	# zip them
+	zipName = os.path.join(outDir, '..', '%s-entries' % slugify(site.nickname))
+	make_archive(zipName, 'gztar', outDir)
+
+	# transfer to download directory
+	# this is a fixed directory
+	#TODO: transfer to donwload directory & email
+	return
+
+# error handlers
+# TODO: create these htmls
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html'), 500
 
 ##################################################
 # Routing starts
@@ -89,7 +348,7 @@ def updateEntry(entryId, entryValues):
 
 @app.route('/')
 def index():
-	return render_template('index.html')
+	return redirect('/signin/')
 
 @app.route('/signup/', methods=['GET', 'POST'])
 def signup():
@@ -238,205 +497,7 @@ def displaySite(siteId):
 @app.route('/generateSite/<int:siteId>/')
 @login_required
 def generateSite(siteId):
-	# flask by default looks for template in /template folder
-	# so we need to create a new environment
-	from jinja2 import Environment, FileSystemLoader
-	import markdown2 as md
-
-	site = Site.query.get(siteId)
-
-	# site details
-	siteDetails				  = {}
-	siteDetails['name']		  = site.name
-	siteDetails['url']		  = site.url
-	siteDetails['tagline']	  = site.tagline
-	siteDetails['gAnalytics'] = site.gAnalytics if site.gAnalytics else ''
-	siteDetails['disqusName'] = site.disqusName if site.disqusName else ''
-	siteDetails['clickyId']   = site.clickyId if site.clickyId else ''
-	if site.statcounterId:
-		projectId, securityId = site.statcounterId.split(';')
-		siteDetails['statcounterProjectId']	= projectId
-		siteDetails['statcounterSecurityId'] = securityId
-	else:
-		siteDetails['statcounterId'] = ''
-
-	# user details
-	userDetails            = {}
-	userDetails['name']    = site.owner.name
-	userDetails['twitter'] = site.owner.twitter
-	userDetails['gplus']   = site.owner.gplus
-
-	envDetails = {}
-	# TODO: this needs to be magically set
-	envDetails['env'] = app.config['ENVIRONMENT']
-	# generated time
-	envDetails['gTime'] = datetime.datetime.now()
-
-	templateBaseDir = os.path.join(baseDir, 'siteFiles', str(site.id), 'template')
-	outDir          = os.path.join('output', str(site.id), 'html')
-	assetsDir       = os.path.join(templateBaseDir, 'assets')
-
-	if os.path.exists(outDir):
-		rmtree(outDir, ignore_errors=True)
-	else:
-		app.logger.error("%s path doesnt exists" % outDir)
-
-	#os.makedirs(outDir)
-	# copy assets dir
-	copytree(assetsDir, outDir)
-
-	# it is expected that this directory exists
-	destDir = site.destDir
-
-	thltEnv = Environment(loader=FileSystemLoader(templateBaseDir))
-
-	# has unique tags
-	siteTags = {}
-	# siteTags will look like
-	# {'tag1': ['first-post', 'third-post'], 'tag2': ['third-post]'}
-
-	# allEntries contains both posts & pages (used for sitemap etc)
-	allEntries = []
-	# onlyposts excludes pages (used for index & feeds)
-	onlyPosts = []
-	# TODO: sqlite as in-momory db
-
-	for entry in site.entries.order_by(Entry.publishAt.desc()):
-		#print "generating %s" % entry.title
-		if entry.tags and entry.tags is not None and entry.tags != 'None':
-			tagsHTML = '|'.join(["<a href=/tags/%s/>%s</a>" % (tag.strip(), tag.strip()) \
-													for tag in entry.tags.split(",")])
-		else:
-			tagsHTML = ''
-
-		# this dict is writen into siteTags
-		# so content is writen into this dict after
-		# inserting into siteTags
-		# as content is not needed for siteTags
-		entryDetails = {}
-		entryDetails['title'] = entry.title
-		entryDetails['subtitle'] = entry.subtitle
-		if entry.subtitle is None or entry.subtitle == 'null' or entry.subtitle == 'None':
-			entryDetails['subtitle'] = ''
-		entryDetails['slug'] = entry.slug
-		entryDetails['url'] = site.url + '/' + entry.slug + '/'
-		entryDetails['type'] = 'post' if entry.isPost == 1 else 'page'
-		entryDetails['excerpt'] = entry.excerpt
-		entryDetails['publishAt'] = entry.publishAt
-		entryDetails['tagsHTML'] = tagsHTML
-		entryDetails['tags'] = entry.tags
-
-		# push tags into siteTags
-		# TODO: check if this can be done by in-memory sqlite
-		if entry.tags is not None:
-			for tag in entry.tags.split(','):
-				tag = tag.strip()
-				if tag in siteTags:
-					siteTags[tag].append(entryDetails)
-				else:
-					siteTags[tag] = []
-					siteTags[tag].append(entryDetails)
-
-		# now add content before generating the html
-		# convert content to markdown with extensions
-		entryDetails['content'] = md.markdown(entry.content,
-				extras=["fenced-code-blocks", "footnotes", "wiki-tables", "tables"])
-
-		# push to allEntries
-		# this is used to generate both main index & sitemap
-		allEntries.append(entryDetails)
-		if entry.isPost == 1:
-			onlyPosts.append(entryDetails)
-
-		# create individual posts
-		currentTemplate = thltEnv.get_template('post.html')
-		dirToCreate = os.path.join(outDir, entry.slug)
-		if not os.path.exists(dirToCreate):
-			os.makedirs(dirToCreate)
-		HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, entry=entryDetails, \
-									user=userDetails, envDetails=envDetails))
-		with open(os.path.join(outDir, entry.slug, 'index.html'), "wb") as fileToSave:
-			fileToSave.write(HTMLToStore.encode('utf-8'))
-
-	# once done with individual entries, create other ones
-	# create sitemaps
-	currentTemplate = thltEnv.get_template('sitemap.html')
-	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, entries=allEntries, \
-								tags=siteTags.keys(), envDetails=envDetails))
-	with open(os.path.join(outDir, 'sitemap.xml'), "wb") as fileToSave:
-		fileToSave.write(HTMLToStore)
-
-	# index
-	currentTemplate = thltEnv.get_template('index.html')
-	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, entries=onlyPosts, \
-								 user=userDetails, envDetails=envDetails))
-	with open(os.path.join(outDir, 'index.html'), "wb") as fileToSave:
-		fileToSave.write(HTMLToStore.encode('utf-8'))
-
-	# tags
-	dirToCreate = os.path.join(outDir, 'tags')
-	if not os.path.exists(dirToCreate):
-		os.makedirs(dirToCreate)
-	currentTemplate = thltEnv.get_template('tags.html')
-	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, user=userDetails, \
-									envDetails=envDetails, tags=siteTags))
-	with open(os.path.join(outDir, 'tags', 'index.html'), "wb") as fileToSave:
-		fileToSave.write(HTMLToStore.encode('utf-8'))
-
-	# individual tag
-	for tag in siteTags:
-		dirToCreate = os.path.join(outDir, 'tags', tag)
-		if not os.path.exists(dirToCreate):
-			os.makedirs(dirToCreate)
-		currentTemplate = thltEnv.get_template('tag.html')
-		HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, user=userDetails, \
-										envDetails=envDetails, tag=tag, entries=siteTags[tag]))
-		with open(os.path.join(outDir, 'tags', tag, 'index.html'), "wb") as fileToSave:
-			fileToSave.write(HTMLToStore.encode('utf-8'))
-
-	# archives
-	dirToCreate = os.path.join(outDir, 'archives')
-	if not os.path.exists(dirToCreate):
-		os.makedirs(dirToCreate)
-	currentTemplate = thltEnv.get_template('archives.html')
-	HTMLToStore = htmlmin.minify(currentTemplate.render(site=siteDetails, user=userDetails, \
-									envDetails=envDetails, entries=onlyPosts))
-	with open(os.path.join(outDir, 'archives', 'index.html'), "wb") as fileToSave:
-		fileToSave.write(HTMLToStore.encode('utf-8'))
-
-	# feeds
-	# only 10 posts
-	currentTemplate = thltEnv.get_template('feeds.html')
-	HTMLToStore = currentTemplate.render(site=siteDetails, user=userDetails, \
-									envDetails=envDetails, entries=onlyPosts[:10])
-	with open(os.path.join(outDir, 'feed.xml'), "wb") as fileToSave:
-		fileToSave.write(HTMLToStore.encode('utf-8'))
-
-	# now start transfering the files to destDir
-	# using subprocess to sync two folders
-	# TODO: will have to use ssh to sync a remote folder
-	# Ref: https://code.google.com/p/remotefoldersync/source/browse/trunk/ssh.py
-	# or fabric project
-
-	import subprocess
-	logFile = str(site.id) + 'sync.log'
-	dirToCreate = 'synclogs'
-	if not os.path.exists(dirToCreate):
-		os.makedirs(dirToCreate)
-
-	# ref: http://stackoverflow.com/a/22757221/770719
-	# ref: http://sharats.me/the-ever-useful-and-neat-subprocess-module.html
-	# rsyncArguments = ["-avzr", "--delete", "--exclude='.*'"]
-	rsyncArguments = ["-avzr", "--delete"]
-	rsyncArguments.append("--log-file=" + os.path.join(dirToCreate, logFile))
-	localFolder = outDir + '/'
-	remoteFolder = destDir + '/'
-	rsyncArguments.append(localFolder)
-	rsyncArguments.append(destDir)
-	returncode = subprocess.call(["rsync"] + rsyncArguments)
-	if returncode != 0:
-		app.logger.error('sync failed with %s' % str(returncode))
-
+	generateSiteAsync(siteId)
 	return redirect('/mysites/')
 
 @app.route('/insertFromFiles/')
@@ -510,41 +571,7 @@ def insertFromFiles():
 @app.route('/exportSite/<int:siteId>/')
 @login_required
 def exportSite(siteId):
-	import os
-
-	site = Site.query.get(id=siteId)
-
-	outDir = os.path.join('output', str(siteId), 'export')
-	if os.path.exists(outDir):
-		rmtree(outDir)
-
-	os.makedirs(outDir)
-
-	for entry in site.entries.order_by(Entry.publishAt.desc()):
-		if entry.isPost == '1':
-			entryType = 'post'
-		else:
-			entryType = 'page'
-
-		entryFileName = "%s-%s.md" % (datetime.datetime.strftime(entry.publishAt, '%Y'), entry.slug)
-		exportContent = """blog: %s
-id: %s
-title: %s
-subtitle: %s
-date: %s
-slug: %s
-tags: %s
-tweetId: %s
-type: %s
-excerpt: %s
----
-%s
-""" % (site.nickname, entry.id, entry.title, entry.subtitle, entry.publishAt,
-					entry.slug, entry.tags, entry.tweetId, entryType, entry.excerpt,
-					entry.content)
-		with open(os.path.join(outDir, entryFileName), "wb") as fileToSave:
-			fileToSave.write(exportContent.encode('utf-8'))
-
+	exportSiteAsync(siteId)
 	return redirect('/mysites/')
 
 ##################################################
