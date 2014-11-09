@@ -89,7 +89,7 @@ def deploy():
     #activate corresponding virtualenv and install required modules
     run('source thltenv/bin/activate')
     put('requirements.txt', 'requirements.txt')
-    pipinstall = run('pip install -r requirements.txt')
+    pipinstall = run('pip install -r requirements.txt --no-use-wheel')
     if pipinstall.succeeded:
       # by default, rsync will create a directory by name of local directory
       # in the remote root

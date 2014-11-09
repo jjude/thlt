@@ -1,6 +1,7 @@
 from app import db
 from datetime import datetime
 from slugify import slugify
+import pytz
 
 #
 # email is used for login
@@ -10,7 +11,7 @@ class User(db.Model):
   email     = db.Column(db.String(120), index=True, unique=True)
   password  = db.Column(db.String(100))
   name      = db.Column(db.String(120))
-  join_date = db.Column(db.DateTime)
+  join_date = db.Column(db.DateTime(timezone=True))
   active    = db.Column(db.Boolean)
   twitter   = db.Column(db.String(20))
   fb        = db.Column(db.String(20))
@@ -23,7 +24,7 @@ class User(db.Model):
     self.email     = kwargs.get('email')
     self.password  = kwargs.get('password')
     self.name      = kwargs.get('name', '')
-    self.join_date = datetime.now()
+    self.join_date = datetime.now(pytz.utc)
     self.active    = True
     self.twitter   = kwargs.get('twitter', '')
     self.fb        = kwargs.get('fb', '')
@@ -38,7 +39,7 @@ class Site(db.Model):
   nickname      = db.Column(db.String(20))
   tagline       = db.Column(db.String(250))
   description   = db.Column(db.String(250))
-  gTime         = db.Column(db.DateTime) #last generated time
+  gTime         = db.Column(db.DateTime(timezone=True)) #last generated time
   statcounterId = db.Column(db.String(20)) #projectid;securityid
   clickyId      = db.Column(db.String(20))
   gAnalytics    = db.Column(db.String(20))
@@ -47,7 +48,7 @@ class Site(db.Model):
   destDir       = db.Column(db.String(100))
   url           = db.Column(db.String(100), unique=True)
   active        = db.Column(db.Boolean)
-  createdAt     = db.Column(db.DateTime)
+  createdAt     = db.Column(db.DateTime(timezone=True))
   user_id       = db.Column(db.Integer, db.ForeignKey('user.id'))
   entries       = db.relationship('Entry', backref='site', lazy='dynamic', cascade="all,delete")
 
@@ -56,7 +57,7 @@ class Site(db.Model):
     self.nickname      = kwargs.get('nickname')
     self.tagline       = kwargs.get('tagline','')
     self.description   = kwargs.get('description','')
-    self.gTime         = datetime.now()
+    self.gTime         = datetime.now(pytz.utc)
     self.statcounterId = kwargs.get('statcounterId', '')
     self.gAnalytics    = kwargs.get('gAnalytics', '')
     self.clickyId      = kwargs.get('clickyId', '')
@@ -65,7 +66,7 @@ class Site(db.Model):
     self.destDir       = kwargs.get('destDir', '')
     self.url           = kwargs.get('url')
     self.active        = True
-    self.createdAt     = datetime.now()
+    self.createdAt     = datetime.now(pytz.utc)
     self.user_id       = kwargs.get('owner')
 
   def __repr__(self):
@@ -84,9 +85,9 @@ class Entry(db.Model):
   tweetId   = db.Column(db.String(20))
   tweetHTML = db.Column(db.String(100))
   content   = db.Column(db.Text)
-  publishAt = db.Column(db.DateTime) # publish at
+  publishAt = db.Column(db.DateTime(timezone=True)) # publish at
   isPost    = db.Column(db.Boolean)
-  createdAt = db.Column(db.DateTime)
+  createdAt = db.Column(db.DateTime(timezone=True))
   site_id   = db.Column(db.Integer, db.ForeignKey('site.id'))
 
   def __init__(self, **kwargs):
@@ -97,9 +98,9 @@ class Entry(db.Model):
     self.excerpt   = kwargs.get('excerpt','')
     self.tweetId   = kwargs.get('tweetId', '')
     self.content   = kwargs.get('content','')
-    self.publishAt = kwargs.get('publishAt', datetime.now())
+    self.publishAt = kwargs.get('publishAt', datetime.now(pytz.utc))
     self.isPost    = kwargs.get('isPost', True)
-    self.createdAt = datetime.now()
+    self.createdAt = datetime.now(pytz.utc)
     self.site_id   = kwargs.get('site')
 
   def __repr__(self):

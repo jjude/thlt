@@ -12,3 +12,4 @@ itsdangerous==0.24
 markdown2==2.3.0
 python-slugify==0.0.9
 htmlmin==0.1.5
+pytz==2014.9

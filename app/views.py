@@ -21,11 +21,12 @@ from models import User, Site, Entry
 # other python ops
 from shutil import copytree, rmtree, make_archive
 import os
-import datetime
+from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from hashlib import md5
 from slugify import slugify
 import htmlmin
+import pytz
 
 # TODO: implement flash, csrf in forms
 
@@ -57,7 +58,7 @@ def createEntry(siteId, entryValues):
         excerpt   = entryValues['excerpt'],
         tweetId   = entryValues['tweetId'],
         content   = entryValues['content'],
-        publishAt = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.datetime.now(),
+        publishAt = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.now(pytz.utc),
         isPost    = entryValues['isPost'],
         site      = siteId
         )
@@ -77,7 +78,7 @@ def updateEntry(entryId, entryValues):
     entry.excerpt   = entryValues['excerpt']
     entry.tweetId   = entryValues['tweetId']
     entry.content   = entryValues['content']
-    entry.publishAt = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.datetime.now()
+    entry.publishAt = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.now(pytz.utc)
     entry.isPost    = entryValues['isPost']
     db.session.commit()
   return
@@ -100,11 +101,11 @@ def generateSiteAsync(siteId):
   siteDetails['disqusName'] = site.disqusName if site.disqusName else ''
   siteDetails['clickyId']   = site.clickyId if site.clickyId else ''
   if site.statcounterId:
-            projectId, securityId = site.statcounterId.split(';')
-            siteDetails['statcounterProjectId'] = projectId
-            siteDetails['statcounterSecurityId'] = securityId
+      projectId, securityId = site.statcounterId.split(';')
+      siteDetails['statcounterProjectId'] = projectId
+      siteDetails['statcounterSecurityId'] = securityId
   else:
-            siteDetails['statcounterId'] = ''
+      siteDetails['statcounterId'] = ''
 
   # user details
   userDetails            = {}
@@ -116,7 +117,7 @@ def generateSiteAsync(siteId):
   # TODO: this needs to be magically set
   envDetails['env'] = app.config['ENVIRONMENT']
   # generated time
-  envDetails['gTime'] = datetime.datetime.now()
+  envDetails['gTime'] = datetime.now(pytz.utc)
 
   templateBaseDir = os.path.join(baseDir, 'siteFiles', str(site.id), 'template')
   outDir          = os.path.join('output', str(site.id), 'html')
@@ -166,7 +167,7 @@ def generateSiteAsync(siteId):
       entryDetails['subtitle'] = ''
     entryDetails['slug'] = entry.slug
     entryDetails['url'] = site.url + '/' + entry.slug + '/'
-    entryDetails['type'] = 'post' if entry.isPost == 1 else 'page'
+    entryDetails['type'] = 'post' if entry.isPost else 'page'
     entryDetails['excerpt'] = entry.excerpt
     entryDetails['publishAt'] = entry.publishAt
     entryDetails['tagsHTML'] = tagsHTML
@@ -191,7 +192,7 @@ def generateSiteAsync(siteId):
     # push to allEntries
     # this is used to generate both main index & sitemap
     allEntries.append(entryDetails)
-    if entry.isPost == 1:
+    if entry.isPost:
       onlyPosts.append(entryDetails)
 
     # create individual posts
@@ -296,13 +297,13 @@ def exportSiteAsync(siteId):
   os.makedirs(outDir)
 
   for entry in site.entries.order_by(Entry.publishAt.desc()):
-    if entry.isPost == '1':
+    if entry.isPost:
       entryType = 'post'
     else:
       entryType = 'page'
 
-    entryYear = datetime.datetime.strftime(entry.publishAt, '%Y')
-    entryMonth = datetime.datetime.strftime(entry.publishAt, '%m')
+    entryYear = datetime.strftime(entry.publishAt, '%Y')
+    entryMonth = datetime.strftime(entry.publishAt, '%m')
     entryFileName = "%s-%s-%s.md" % (entryYear, entryMonth, entry.slug)
     exportContent = """blog: %s
 id: %s
@@ -508,8 +509,10 @@ def insertFromFiles():
   """
   Start creating the post
   File contents will be in below template; <content> is always in md
-  Meta data can be in any order but should be delimitted by ==== in end
+  Meta data can be in any order but should be delimitted by --- in end
   If permalink is given it will overwrite the existing one
+  If you want to have : in the content like Title: Book Summary : McKinsey Way, then
+  put that within "" like Title: "Book Summary: McKinsey Way"
 
   Blog:
   Title:
@@ -527,9 +530,11 @@ def insertFromFiles():
   <content>
   """
 
-  dirToRead = 'userFiles/%s' % session['userId']
+  dirToRead = os.path.join(baseDir,'..','userFiles', str(session['userId']))
+  app.logger.info('reading from %s' % dirToRead)
   for fileName in os.listdir(dirToRead):
     fileName = os.path.join(dirToRead, fileName)
+    app.logger.info('dealing with %s' % fileName)
     if fileName.endswith('.md'):
       with open(fileName, 'r') as entry:
         fileContent = unicode(entry.read(),'utf8')
@@ -544,14 +549,14 @@ def insertFromFiles():
         EntryValues              = {}
         EntryValues['title']     = postMeta['title'] if 'title' in postMeta else ''
         EntryValues['subtitle']  = postMeta['subtitle'] if 'subtitle' in postMeta else ''
-        EntryValues['publishAt'] = datetime.datetime.strptime(postMeta['date'][:16], '%Y-%m-%d %H:%M') if 'date' in postMeta else ''
         EntryValues['slug']      = postMeta['slug'] if 'slug' in postMeta else slugify(EntryValues['title'])
         EntryValues['tags']      = postMeta['tags'] if 'tags' in postMeta else ''
         EntryValues['tweetId']   = postMeta['tweetId'] if 'tweetId' in postMeta else ''
         EntryValues['excerpt']   = postMeta['excerpt'] if 'excerpt' in postMeta else ''
         #if there was empty lines in the begining or at the end
         EntryValues['content']  = postContent.strip()
-        EntryValues['isPost']  = 1 if postMeta['type'] == 'post' else 0
+        EntryValues['isPost']  = True if postMeta['type'] == 'post' else False
+        EntryValues['publishAt'] = postMeta['date']
 
         site = Site.query.filter_by(nickname=blogName).first()
         if site:
@@ -596,8 +601,8 @@ def newEntry():
     entryValues['excerpt']   = request.form['excerpt']
     entryValues['tweetId']   = request.form['tweetId']
     entryValues['content']   = request.form['content']
-    entryValues['publishAt'] = datetime.datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.datetime.now()
-    entryValues['isPost']    = 1 if request.form['type'] == '0' else 0
+    entryValues['publishAt'] = datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.now(pytz.utc)
+    entryValues['isPost']    = True if request.form['type'] == '0' else False
 
     createEntry(session['siteId'], entryValues)
 
@@ -631,8 +636,8 @@ def editEntry(entryId):
     EntryValues['excerpt']   = request.form['excerpt']
     EntryValues['tweetId']   = request.form['tweetId']
     EntryValues['content']   = request.form['content']
-    EntryValues['publishAt'] = datetime.datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.datetime.now()
-    EntryValues['isPost']    = 1 if request.form['type'] == '0' else 0
+    EntryValues['publishAt'] = datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.now(pytz.utc)
+    EntryValues['isPost']    = True if request.form['type'] == '0' else False
 
     updateEntry(entryId, EntryValues)
 
