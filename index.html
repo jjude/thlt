@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <title>Thltpy by jjude</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>Thltpy</h1>
+        <h2>static blog engine for the rest of us</h2>
+
+        <section id="downloads">
+          <a href="https://github.com/jjude/thltpy/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/jjude/thltpy/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/jjude/thltpy" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>
+<a id="thlt---static-blog-engine-for-the-rest-of-us" class="anchor" href="#thlt---static-blog-engine-for-the-rest-of-us" aria-hidden="true"><span class="octicon octicon-link"></span></a>thlt - static blog engine for the rest of us</h1>
+
+<h3>
+<a id="what-is-this" class="anchor" href="#what-is-this" aria-hidden="true"><span class="octicon octicon-link"></span></a>What is this?</h3>
+
+<p>Thlt is a static blog engine that sits somewhere between wordpress and static generators like Jekyll. Static generators lack flexibility like posting via email, APIs, clients etc. Currently static generators are only for geeks. Thlt is an experiement to bring that to masses.</p>
+
+<p>Even if that experiment fails, I hope I would've learnt development, deployment and ops of cloud based apps.</p>
+
+<p>Checkout 'develop' branch for latest code.</p>
+
+<h3>
+<a id="how-to-use" class="anchor" href="#how-to-use" aria-hidden="true"><span class="octicon octicon-link"></span></a>How to use</h3>
+
+<h3>
+<a id="features-implemented" class="anchor" href="#features-implemented" aria-hidden="true"><span class="octicon octicon-link"></span></a>Features implemented</h3>
+
+<ol>
+<li>new user signup</li>
+<li>signin</li>
+<li>signout</li>
+<li>create new sites</li>
+<li>configure output folder for a site</li>
+<li>delete a site</li>
+<li>create, modify &amp; delete an entry</li>
+<li>generate static htmls, including feeds.xml and sitemap. these are stored in the output folder configured earlier</li>
+<li>sync with a folder (folder should be reachable from where the app is hosted without a password)</li>
+<li>import entries from files</li>
+<li>tags (not planning to introduce categories)</li>
+</ol>
+
+<h3>
+<a id="laundry-list-of-features-to-be-implemented-in-no-particular-order" class="anchor" href="#laundry-list-of-features-to-be-implemented-in-no-particular-order" aria-hidden="true"><span class="octicon octicon-link"></span></a>Laundry List of features to be implemented (in no particular order)</h3>
+
+<ol>
+<li>forgot password</li>
+<li>confirm user account</li>
+<li>xmlrpc api</li>
+<li>read templates from git repo</li>
+<li>transport htmls to google appspot &amp; amazon s3</li>
+<li>use dockers to deploy</li>
+<li>support promotional messages on top bar</li>
+<li>import from wordpress</li>
+<li>export to wordpress</li>
+<li>preview</li>
+<li>check output to git repo</li>
+<li><p>post by email</p></li>
+<li><p>hot-deploy</p></li>
+<li>have deployment in two PaSS and using loadbalancer to route</li>
+<li>automate testing, deployment, post-deployment testing</li>
+<li>monitoring (pingdom?)</li>
+<li>auto-restart after failures</li>
+<li>transfer generated html to ftp of destination site</li>
+<li>read from dropbox</li>
+</ol>
+
+<h3>
+<a id="technologies-used" class="anchor" href="#technologies-used" aria-hidden="true"><span class="octicon octicon-link"></span></a>Technologies used</h3>
+
+<ol>
+<li>Flask<br>
+</li>
+<li>Jinja2<br>
+</li>
+<li>SQLite (for development)<br>
+</li>
+<li>Postgresql (for production)</li>
+</ol>
+
+<h3>
+<a id="whats-in-a-name" class="anchor" href="#whats-in-a-name" aria-hidden="true"><span class="octicon octicon-link"></span></a>What's in a name</h3>
+
+<p>thlt = தாலாட்டு; Tamil word for a lullaby song.</p>
+
+<h3>
+<a id="sites-using-thlt" class="anchor" href="#sites-using-thlt" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sites using thlt</h3>
+
+<p>All the sites are mine:<br>
+1. <a href="http://tech.jjude.com">http://tech.jjude.com</a><br>
+2. <a href="http://biz.jjude.com">http://biz.jjude.com</a><br>
+3. <a href="http://ta.jjude.com">http://ta.jjude.com</a>   </p>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
