@@ -6,6 +6,8 @@ Thlt is a static blog engine that sits somewhere between wordpress and static ge
 
 Even if that experiment fails, I hope I would've learnt development, deployment and ops of cloud based apps.
 
+Checkout 'develop' branch for latest code.
+
 ###How to use
 
 
@@ -19,7 +21,9 @@ Even if that experiment fails, I hope I would've learnt development, deployment 
 6. delete a site
 7. create, modify & delete an entry
 8. generate static htmls, including feeds.xml and sitemap. these are stored in the output folder configured earlier
-9. import entries from files    
+9. sync with a folder (folder should be reachable from where the app is hosted without a password)
+10. import entries from files
+11. tags (not planning to introduce categories)
 
 ###Laundry List of features to be implemented (in no particular order)
 1. forgot password
@@ -44,10 +48,16 @@ Even if that experiment fails, I hope I would've learnt development, deployment 
 19. read from dropbox
 
 ###Technologies used
-Flask
-Jinja2
-SQLite (for development)
-ClearDB on Azure
+1. Flask    
+2. Jinja2     
+3. SQLite (for development)     
+4. Postgresql (for production)
 
 ###What's in a name
-thlt = தாலாட்டு
+thlt = தாலாட்டு; Tamil word for a lullaby song.
+
+###Sites using thlt
+All the sites are mine:
+1. http://tech.jjude.com   
+2. http://biz.jjude.com    
+3. http://ta.jjude.com   

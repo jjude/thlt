@@ -50,6 +50,7 @@ def auth_user(user):
 # create new Entry
 # EntryValues as dict
 def createEntry(siteId, entryValues):
+  entryDate = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.now()
   newEntry = Entry(
         title     = entryValues['title'],
         subtitle  = entryValues['subtitle'],
@@ -58,7 +59,7 @@ def createEntry(siteId, entryValues):
         excerpt   = entryValues['excerpt'],
         tweetId   = entryValues['tweetId'],
         content   = entryValues['content'],
-        publishAt = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.now(pytz.utc),
+        publishAt = entryDate.replace(tzinfo=pytz.UTC),
         isPost    = entryValues['isPost'],
         site      = siteId
         )
@@ -70,6 +71,7 @@ def createEntry(siteId, entryValues):
 # EntryValues as dict
 def updateEntry(entryId, entryValues):
   entry = Entry.query.get(entryId)
+  entryDate = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.now()
   if entry:
     entry.title     = entryValues['title']
     entry.subtitle  = entryValues['subtitle']
@@ -78,7 +80,7 @@ def updateEntry(entryId, entryValues):
     entry.excerpt   = entryValues['excerpt']
     entry.tweetId   = entryValues['tweetId']
     entry.content   = entryValues['content']
-    entry.publishAt = entryValues['publishAt'] if 'publishAt' in entryValues else datetime.now(pytz.utc)
+    entry.publishAt = entryDate.replace(tzinfo=pytz.UTC)
     entry.isPost    = entryValues['isPost']
     db.session.commit()
   return
@@ -307,14 +309,14 @@ def exportSiteAsync(siteId):
     entryFileName = "%s-%s-%s.md" % (entryYear, entryMonth, entry.slug)
     exportContent = """blog: %s
 id: %s
-title: %s
-subtitle: %s
+title: "%s"
+subtitle: "%s"
 date: %s
 slug: %s
 tags: %s
 tweetId: %s
 type: %s
-excerpt: %s
+excerpt: "%s"
 ---
 %s
 """ % (site.nickname, entry.id, entry.title, entry.subtitle, entry.publishAt,
@@ -546,28 +548,29 @@ def insertFromFiles():
         # inserted. this is used to generate these sites once insertion is
         # complete
         sitesUpdated             = []
-        EntryValues              = {}
-        EntryValues['title']     = postMeta['title'] if 'title' in postMeta else ''
-        EntryValues['subtitle']  = postMeta['subtitle'] if 'subtitle' in postMeta else ''
-        EntryValues['slug']      = postMeta['slug'] if 'slug' in postMeta else slugify(EntryValues['title'])
-        EntryValues['tags']      = postMeta['tags'] if 'tags' in postMeta else ''
-        EntryValues['tweetId']   = postMeta['tweetId'] if 'tweetId' in postMeta else ''
-        EntryValues['excerpt']   = postMeta['excerpt'] if 'excerpt' in postMeta else ''
+        entryValues              = {}
+        entryValues['title']     = postMeta['title'] if 'title' in postMeta else ''
+        entryValues['subtitle']  = postMeta['subtitle'] if 'subtitle' in postMeta else ''
+        entryValues['slug']      = postMeta['slug'] if 'slug' in postMeta else slugify(entryValues['title'])
+        entryValues['tags']      = postMeta['tags'] if 'tags' in postMeta else ''
+        entryValues['tweetId']   = postMeta['tweetId'] if 'tweetId' in postMeta else ''
+        entryValues['excerpt']   = postMeta['excerpt'] if 'excerpt' in postMeta else ''
         #if there was empty lines in the begining or at the end
-        EntryValues['content']  = postContent.strip()
-        EntryValues['isPost']  = True if postMeta['type'] == 'post' else False
-        EntryValues['publishAt'] = postMeta['date']
+        entryValues['content']  = postContent.strip()
+        entryValues['isPost']  = True if postMeta['type'] == 'post' else False
+        entryDate = postMeta['date'] if 'date' in postMeta else datetime.now()
+        entryValues['publishAt'] = entryDate.replace(tzinfo=pytz.UTC)
 
         site = Site.query.filter_by(nickname=blogName).first()
         if site:
-          entry = Entry.query.filter_by(slug=EntryValues['slug']).first()
+          entry = Entry.query.filter_by(slug=entryValues['slug']).first()
           if entry:
             # existing entry; update it
-            updateEntry(entry.id, EntryValues)
+            updateEntry(entry.id, entryValues)
             sitesUpdated.append(site.id)
           else:
             # create a new entry
-            createEntry(site.id, EntryValues)
+            createEntry(site.id, entryValues)
             sitesUpdated.append(site.id)
           os.remove(fileName)
   return redirect('/mysites/')
@@ -601,7 +604,8 @@ def newEntry():
     entryValues['excerpt']   = request.form['excerpt']
     entryValues['tweetId']   = request.form['tweetId']
     entryValues['content']   = request.form['content']
-    entryValues['publishAt'] = datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.now(pytz.utc)
+    entryDate = datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.now()
+    entryValues['publishAt'] = entryDate.replace(tzinfo=pytz.UTC)
     entryValues['isPost']    = True if request.form['type'] == '0' else False
 
     createEntry(session['siteId'], entryValues)
@@ -636,7 +640,10 @@ def editEntry(entryId):
     EntryValues['excerpt']   = request.form['excerpt']
     EntryValues['tweetId']   = request.form['tweetId']
     EntryValues['content']   = request.form['content']
-    EntryValues['publishAt'] = datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.now(pytz.utc)
+    entryDate = datetime.strptime(request.form['publishAt'][:16], '%Y-%m-%d %H:%M') if request.form['publishAt'] else datetime.now()
+    # all dates are timezone aware though I'm not using it now
+    # so convert to UTC times
+    EntryValues['publishAt'] = entryDate.replace(tzinfo=pytz.UTC)
     EntryValues['isPost']    = True if request.form['type'] == '0' else False
 
     updateEntry(entryId, EntryValues)

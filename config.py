@@ -4,9 +4,6 @@
 ###############################################
 
 # TODO: see how security/csrf protection works
-
-# for generating uui as secret key
-import uuid
 import os
 import socket
 
