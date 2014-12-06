@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page">
+	<header class="pageheader">
+		<h1>{{site.name}}</h1>
+		<h4>{{site.tagline}}</h4>
+		<ul>
+			<li><a href="/about/">about</a></li>
+			<li><a href="/sitemap/">sitemap</a></li>
+			<li><a href="/feed.xml">feed</a></li>
+			<li><a href="http://twitter.com/jjude">twitter</a></li>
+		</ul>
+</header>
+
+<div class="pagecontent">
+	<h2 class="worktype">Writing</h2>
+	<section class="listentries">
+		{% for entry in entries[0:5] %}
+			<article class="entry">
+				<span class="entrymeta">
+					<time pubdate="pubdate">{{entry.publishAt.strftime('%d-%b-%y')}}</time>
+					{% if entry.tagsHTML %}
+						on: {{entry.tagsHTML}}
+					{% endif %}
+				</span>
+				<h3><a href="/{{entry.slug}}/">{{entry.title}}</a></h3>
+				{% if entry.subtitle %}
+					<p class="listentrysubtitle">{{entry.subtitle}}</p>
+				{% endif %}
+			</article>
+		{% endfor %}
+		<p class="readall"><a href="/archives/">View All Articles</a></p>
+		<hr class="symbol">
+	</section>
+
+	<h2 class="worktype">Products Developed</h2>
+	<section class="listentries">
+		<article class="entry">
+			<h3><a href="https://bitbucket.org/jjude/thlt">thlt</a></h3>
+			<p class="entrysummary">A static blog engine for the non-geeks. Host, post and publish. Open source software developed in <a href="http://sailsjs.org/">sailsjs </a>framework.</p>
+		</article>
+		<article class="entry">
+			<h3><a href="https://code.google.com/p/s-o-l/">S-O-L</a></h3>
+			<p class="entrysummary">A microblog developed in Django</p>
+		</article>
+		<article class="entry">
+			<h3><a href="https://code.google.com/p/s-i-p/">Say In Pixels</a></h3>
+			<p class="entrysummary">A photoblog developed in Django</p>
+		</article>
+		<article class="entry">
+			<h3><a href="http://blogeasyapp.com/">BlogEasy</a></h3>
+			<p class="entrysummary">A Wordpress client for iOS & Mac. Download from iOS & Mac appstores.</p>
+		</article>
+	</section>
+</div> <!-- pagecontent -->
+</div> <!-- page -->
+{% endblock %}

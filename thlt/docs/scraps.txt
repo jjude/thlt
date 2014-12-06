@@ -1,0 +1,103 @@
+REST api
+========
+
+available at: http://app.thlt.in/api/v1
+
+Collections: authors, blogs, posts, tags
+Only two URLs for each collections: one for collection & another for a specific instance
+Verbs to support: GET, POST, PUT, DELETE
+PUT used only for update
+POST used for both create and update
+
+all collections plural nouns
+
+[?id shouldn't be sequential & guessable; ]
+
+response always in json
+meta within response should include href giving the reference to the current link (child links if any)
+
+{
+'status': 200,
+'code' : 2001,
+'message': 'post instance',
+'meta': {'href':'http://app.thlt.in/v1/blogs/1/posts/1'}
+'data': [{
+    'title': 'i am a title'
+    ...
+    }
+    ]
+}
+    
+
+Errors:
+{'status': '<http error code>', 'message': '<useful message for humans>, 'code': '<internal error code>'}
+200, 201, 304, 400, 401, 403, 404, 500
+
+limit fields; fields given in comma separated fields (ignore unknown field in the list) (?fields=id,title,tags)
+
+support pagination; start & count (?start=10&count=10)
+{
+'status': 200,
+'code' : 2001,
+'message': 'posts collections with pagination',
+'meta': {'href': 'http://app.thlt.in/v1/blogs/1/posts?start=1&count=10',
+	'first': 'http://app.thlt.in/v1/blogs/1/posts?start=1',
+    'last': 'http://app.thlt.in/v1/blogs/1/posts?start=100',
+    'next': 'http://app.thlt.in/v1/blogs/1/posts?start=11&count=10',
+    'previous': null
+    }    
+'data': [{
+	'href':'http://app.thlt.in/v1/blogs/1/posts/1',
+    'title': 'hello i am first post'
+    ...
+	},
+    {
+    'href':'http://app.thlt.in/v1/blogs/1/posts/2',
+    'title': 'hello i am second post'
+    ...
+    }
+    ]
+
+
+formats: support json (?type=json)
+
+API will support camelCase
+
+non-resource-y stuff will be vers: generate, publish
+
+authentication: token based login (look into oauth)
+
+date&time: use utc; is0 8601
+
+
+need to understand caching & concurrency control
+have to support search too
+have to support binary data like images (may be inline base64 or multi-part)
+
+
+without login
+=============
+/authors
+/authors/blogs
+/blogs
+/blogs/authors <- multiple authors for a blog
+
+/posts <- recent posts
+
+after login
+===========
+
+Verbs            | Endpoints
+=================|============================================
+GET, POST        | /blogs
+GET, PUT, DELETE | /blogs/<int:blogid>
+GET, POST        | /blogs/<int:blogid>/posts
+GET, PUT, DELETE | /blogs/<int:blogid>/posts/<int:postid>
+
+
+
+
+Testing:
+=======
+curl -H "Content-type: application/json" -X POST "http://localhost:5000/api/v1/signup" -d '{"email":"hello@gmail.com", "password":"12345"}'
+curl "http://localhost:5000/api/v1/signin?email=hello@gmail.com&password=hello"

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page">
+	<header class="pageheader">
+		<h1>All Themes</h1>
+		<h4>by <a href="/">Joseph Jude</a></h4>
+	</header>
+	<div class="pagecontent">
+		{% for tag in tags %}
+		<h3><a id="title" href="/tags/{{tag}}/">{{tag}}</a></h3>
+		{% endfor %}
+	</div>
+	{% include 'includes/footer.html' %}
+</div>
+{% endblock %}

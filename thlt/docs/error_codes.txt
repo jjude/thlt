@@ -1,0 +1,9 @@
+4001 : Email id or password not provided
+4002 : User id wrong or password wrong
+4003 : Wrong token
+4004 : Not all mandatory fields filled for create_site
+4005 : Error creating a new site
+4006 : Error while creating directory for a site
+
+
+5001 : User not created
