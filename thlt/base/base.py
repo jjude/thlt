@@ -4,9 +4,8 @@
 # Session mgmt should be handled in respective modules
 ###################################################
 
-from flask import current_app, jsonify, request
+from flask import current_app, jsonify, request, json
 from sqlalchemy.exc import IntegrityError
-
 
 # for token based authentication
 # use serializer to generate & verify tokens
@@ -27,7 +26,7 @@ import htmlmin
 import pytz
 
 
-TOKEN_LIFE = 86400
+TOKEN_LIFE = 86400 # one day
 
 ###################################################
 # Utilities
@@ -96,6 +95,7 @@ def create_user(email=None, password=None):
 
       dir_to_create = os.path.join(current_app.config['BASE_DIR'],'user_files', str(new_user.id))
       if not os.path.exists(dir_to_create):
+        print '********going to create folders: %s' % dir_to_create
         os.makedirs(dir_to_create)
       ret_str = res_str(200, 2001, "User Created", {'userId': new_user.id})
     except IntegrityError as error:
@@ -132,9 +132,17 @@ def get_sites_for_user(token):
   if not cust_id:
     ret_str = res_str(400, 4003, 'Check your token')
   else:
-    my_sites = User.query.get(cust_id).sites.all()
-    ret_str = res_str(200, 2001, 'Sites for user', {'sites': my_sites})
-  print ret_str
+    # ref: http://stackoverflow.com/a/10370224/770719
+    # for converting sqlalchemy objects to dict
+    # ref: http://stackoverflow.com/a/26508101/770719
+    # for quick fix that works
+    sites_as_list = []
+    for site in User.query.get(cust_id).sites.all():
+      site_as_dict = site.__dict__
+      del site_as_dict['_sa_instance_state']
+      sites_as_list.append(site_as_dict)
+      
+    ret_str = res_str(200, 2001, 'Sites for user', {'sites': sites_as_list})
   return ret_str
 
 def create_site(token, site_details):
@@ -153,7 +161,6 @@ def create_site(token, site_details):
     disqus_name
     dest_dir *
   """
-  
   cust_id = get_custid_from_token(token)
   if not cust_id:
     ret_str = res_str(400, 4003, 'Check your token')
@@ -162,7 +169,7 @@ def create_site(token, site_details):
       'nickname' not in site_details or \
       'url' not in site_details or \
       'destDir' not in site_details:
-      ret_str = res_str(400, 4004, 'Missing mandatory fields for create_site')
+      ret_str = res_str(400, 4004, 'Missing mandatory fields for creating a site')
     else:
       try:
         new_site = Site(
@@ -194,14 +201,70 @@ def create_site(token, site_details):
         ret_str = res_str(400, 4005, 'Error while creating new site')    
   return ret_str
 
-def update_site():
-  return
+def update_site(token, site_id, site_details):
+  cust_id = get_custid_from_token(token)
+  if not cust_id:
+    ret_str = res_str(400, 4003, 'Check your token')
+  else:
+    if not site_id:
+      ret_str = res_str(400, 4010, 'Site Id not mentioned for update')
+    else:
+      try:
+        site = Site.query.get(site_id)
+        if 'sitename' in site_details: site.name = site_details['sitename']
+        if 'tagline' in site_details:  site.tagline = site_details['tagline']
+        if 'description' in site_details: site.description = site_details['description']
+        if 'statcounterId' in site_details: site.statcounterId = site_details['statcounterId']
+        if 'gAnalytics' in site_details: site.gAnalytics = site_details['gAnalytics']
+        if 'clickyId' in site_details: site.clickyId = site_details['clickyId']
+        if 'disqusName' in site_details: site.disqusName = site_details['disqusName']
+        if 'destDir' in site_details: site.destDir = site_details['destDir']
+        if 'url' in site_details: site.url = site_details['url']
+        db.session.commit()
+        ret_str = res_str(200, 2001, 'Site updated successfully')
+      except Exception as e:
+        current_app.logger.error('Error while updating site:%s is:%s' % (site.name, e.message))
+        ret_str = res_str(400, 4009, 'Error while updating site')    
+  return ret_str
 
 def delete_site():
   return
 
-def create_entry():
-  return
+def create_entry(token, entry_values):
+  """
+  token: unexpired token; user id will be embeded
+  entry_values: should contain site_id too
+  """
+  # TODO: get timezone from user & publishAt should be to that tz
+  cust_id = get_custid_from_token(token)
+  if not cust_id:
+    ret_str = res_str(400, 4003, 'Check your token')
+  else:
+    entry_date = entry_values['publishAt'] if 'publishAt' in entry_values else datetime.now()
+    if 'title' not in entry_values or \
+    	'content' not in entry_values or \
+      	'siteId' not in entry_values:
+      ret_str = res_str(400, 4007, 'Missing mandatory fields for creating an entry')
+    else:
+      try:
+        newEntry = Entry(
+              title     = entry_values['title'],
+              subtitle  = entry_values['subtitle'] if 'subtitle' in entry_values else '',
+              slug      = entry_values['slug'] if 'slug' in entry_values else slugify(entry_values['title']),
+              tags      = entry_values['tags'] if 'tags' in entry_values else '',
+              excerpt   = entry_values['excerpt'] if 'excerpt' in entry_values else '',
+              content   = entry_values['content'],
+              publishAt = entry_date.replace(tzinfo=pytz.UTC),
+              isPost    = entry_values['isPost'] if 'isPost' in entry_values else 0,
+              site      = entry_values['siteId']
+              )
+        db.session.add(newEntry)
+        db.session.commit()
+        ret_str = res_str(200, 2001, 'Entry created successfully')
+      except Exception as e:
+        current_app.logger.error('Error while creating entry:%s is:%s' % (entry_values['siteId'], e.message))      
+        ret_str = res_str(400, 4008, 'Error while creating entry')
+  return ret_str
 
 def update_entry():
   return
@@ -209,8 +272,26 @@ def update_entry():
 def delete_entry():
   return
 
-def get_entries_for_site():
-  return
+def get_entries_for_site(token, site_id):
+  """
+  token: unexpired token; user id will be embeded
+  """
+  cust_id = get_custid_from_token(token)
+  if not cust_id:
+    ret_str = res_str(400, 4003, 'Check your token')
+  else:
+    # ref: http://stackoverflow.com/a/26508101/770719
+    # for quick fix that works
+    entries_as_list = []
+    site = Site.query.get(site_id)
+    entries = site.entries.order_by(Entry.publishAt.desc())
+    for entry in entries:
+      entry_as_dict = entry.__dict__
+      del entry_as_dict['_sa_instance_state']
+      entries_as_list.append(entry_as_dict)
+      
+    ret_str = res_str(200, 2001, 'Entries for site', {'siteId': site_id, 'siteNickName': site.nickname, 'entries': entries_as_list})    
+  return ret_str
 
 def generate_a_site():
   return

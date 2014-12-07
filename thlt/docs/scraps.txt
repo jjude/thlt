@@ -89,10 +89,10 @@ after login
 
 Verbs            | Endpoints
 =================|============================================
-GET, POST        | /blogs
-GET, PUT, DELETE | /blogs/<int:blogid>
-GET, POST        | /blogs/<int:blogid>/posts
-GET, PUT, DELETE | /blogs/<int:blogid>/posts/<int:postid>
+GET, POST        | /sites
+GET, PUT, DELETE | /sites/<int:blogid>
+GET, POST        | /sites/<int:blogid>/posts
+GET, PUT, DELETE | /sites/<int:blogid>/posts/<int:postid>
 
 
 

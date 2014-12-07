@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap
@@ -33,6 +34,8 @@ def create_app(config=DefaultConfig):
   return app
 
 def configure_app(app, config=DefaultConfig):
+  if not os.path.exists(config.BASE_DIR):
+    os.makedirs(config.BASE_DIR)
   app.config.from_object(config)
   # toolbar = DebugToolbarExtension(app)
   # app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False 

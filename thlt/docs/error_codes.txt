@@ -4,6 +4,10 @@
 4004 : Not all mandatory fields filled for create_site
 4005 : Error creating a new site
 4006 : Error while creating directory for a site
+4007 : Missing values for creating entry
+4008 : Error while creating an entry
+4009 : Error while updating the entry
+4010 : Site Id not mentioned for update
 
 
 5001 : User not created

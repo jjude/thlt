@@ -74,8 +74,8 @@ def api_signin():
   ret_str = get_token(email, password)
   return jsonify(ret_str)
   
-@api.route('/createsite', methods=['POST'])
-def api_createsite():
+@api.route('/sites', methods=['POST'])
+def api_create_site():
   """
   expects request data in json
   content-type: application/json  
@@ -85,12 +85,48 @@ def api_createsite():
   ret_str = create_site(token, site_data)
   return jsonify(ret_str)
 
-@api.route('/getsites')
-def api_getsite():
+@api.route('/sites', methods=['PUT'])
+def api_update_site():
   """
   expects request data in json
   content-type: application/json  
   """
   token = request.json['token'] if 'token' in request.json else ''
+  site_id = request.args.get('siteId')
+  site_data = request.json['data'] if 'data' in request.json else ''
+  ret_str = update_site(token, site_id, site_data)
+  return jsonify(ret_str)
+
+
+@api.route('/sites')
+def api_get_site():
+  """
+  expects request data in json
+  content-type: application/json  
+  """
+  token = request.json['token'] if 'token' in request.json else ''  
   ret_str = get_sites_for_user(token)
+  return jsonify(ret_str)
+
+@api.route('/entries')
+def api_get_entries_for_site():
+  """
+  expects request data in json
+  content-type: application/json  
+  """
+  siteId = request.args.get('siteId')
+  token = request.json['token'] if 'token' in request.json else ''  
+  ret_str = get_entries_for_site(token, siteId)
+  return jsonify(ret_str)
+
+@api.route('/entries', methods=['POST'])
+def api_create_entry():
+  """
+  expects request data in json
+  content-type: application/json  
+  """
+  
+  token = request.json['token'] if 'token' in request.json else ''
+  entries_data = request.json['data'] if 'data' in request.json else ''
+  ret_str = create_entry(token, entries_data)
   return jsonify(ret_str)

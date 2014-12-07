@@ -38,9 +38,9 @@ class TestConfig(BaseConfig):
   TESTING = True
   ENVIRONMENT = 'test'
   WTF_CSRF_ENABLED = False
+  PRESERVE_CONTEXT_ON_EXCEPTION = False
   # create test.db in base_dir of the dev environment
   # since test_folders won't be created until tests are runs
   # but db will have to be created prior to running any tests
-  BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-  SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR,'test.db')
   BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'test_folders'))
+  SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR,'test.db')
