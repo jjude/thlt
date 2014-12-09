@@ -8,6 +8,7 @@
 4008 : Error while creating an entry
 4009 : Error while updating the entry
 4010 : Site Id not mentioned for update
+4011 : Error while deleting site
 
 
 5001 : User not created

@@ -22,3 +22,10 @@ def t():
     activate_this = '../bin/activate_this.py'
     execfile(activate_this, dict(__file__=activate_this))
     local('python -m unittest discover -v')
+    
+    
+def clean():
+    """
+    clean .pyc files
+    """
+    local("find . -name '*.pyc' -delete")

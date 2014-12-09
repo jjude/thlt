@@ -97,6 +97,16 @@ def api_update_site():
   ret_str = update_site(token, site_id, site_data)
   return jsonify(ret_str)
 
+@api.route('/sites', methods=['DELETE'])
+def api_delete_site():
+  """
+  expects request data in json
+  content-type: application/json  
+  """
+  token = request.json['token'] if 'token' in request.json else ''
+  site_id = request.args.get('siteId')
+  ret_str = delete_site(token, site_id)
+  return jsonify(ret_str)
 
 @api.route('/sites')
 def api_get_site():

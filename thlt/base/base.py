@@ -192,7 +192,7 @@ def create_site(token, site_details):
           template_dir = current_app.config['TEMPLATE_DIR']
           site_files_dir = os.path.join(base_dir, 'site_files', str(new_site.id), 'template')
           copytree(template_dir, os.path.join(base_dir,site_files_dir))
-          ret_str = res_str(200, 2001, 'Site created successfully')
+          ret_str = res_str(200, 2001, 'Site created successfully', {'siteId': new_site.id})
         except Exception as e:
           current_app.logger.error('Error while creating site:%s is:%s' % (site_details['sitename'], e.message))      
           ret_str = res_str(400, 4006, 'Error while creating new directory for new site')
@@ -227,8 +227,22 @@ def update_site(token, site_id, site_details):
         ret_str = res_str(400, 4009, 'Error while updating site')    
   return ret_str
 
-def delete_site():
-  return
+def delete_site(token, site_id):
+  try:
+    siteToDelete = Site.query.get(site_id)
+    db.session.delete(siteToDelete)
+    db.session.commit()
+
+    base_dir = current_app.config['BASE_DIR']
+    site_files_dir = os.path.join(base_dir, 'site_files', site_id)
+    if os.path.exists(site_files_dir):
+      rmtree(site_files_dir)
+    ret_str = res_str(200, 2001, 'Site deleted successfully')
+  except Exception as e:
+    # TODO: logging
+    current_app.logger.error('Error while deleting site:%s is:%s' % (str(site_id), e.message))
+    ret_str = res_str(400, 4011, 'Error while deleting site', {'error' : e.message})
+  return ret_str
 
 def create_entry(token, entry_values):
   """
